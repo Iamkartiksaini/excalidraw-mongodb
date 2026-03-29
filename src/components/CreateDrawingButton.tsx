@@ -29,7 +29,7 @@ export default function CreateDrawingButton({ asCard = false }: CreateDrawingBut
       <button
         onClick={handleCreate}
         disabled={isPending}
-        className="group bg-white border-2 border-dashed border-[#e9ecef] hover:border-[#6965db] transition-all overflow-hidden flex flex-col aspect-[4/3] items-center justify-center cursor-pointer disabled:opacity-50"
+        className="group h-full bg-white border-2 border-dashed border-[#e9ecef] hover:border-[#6965db] transition-all overflow-hidden flex flex-col aspect-[4/3] items-center justify-center cursor-pointer disabled:opacity-50"
         style={{ borderRadius: "8px 2px 7px 3px / 3px 7px 2px 8px" }}
       >
         {isPending ? (

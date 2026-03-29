@@ -12,7 +12,7 @@ const robotoSlabHeading = Roboto_Slab({ subsets: ['latin'], variable: '--font-he
 const raleway = Raleway({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
-  title: "Excalidraw Clone",
+  title: "Excalidraw-MongoDB",
   description: "A free virtual whiteboard with cloud sync and sharing.",
 };
 

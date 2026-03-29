@@ -27,7 +27,7 @@ export default function Navbar() {
           <div className="bg-[#e0d6ff] p-1.5 rounded-lg">
             <Pencil className="w-5 h-5 text-[#6965db]" />
           </div>
-          Excalidraw Clone
+          Excalidraw-MongoDB
         </Link>
 
         {/* Nav Links + Auth */}

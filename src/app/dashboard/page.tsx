@@ -20,7 +20,7 @@ export default async function DashboardPage() {
 
       {drawings.length === 0 ? (
         <div
-          className="flex flex-col items-center justify-center py-24 border-2 border-dashed border-[#e9ecef] bg-[#f8f9fa] shadow-sm"
+          className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))]  items-center justify-center py-24 border-2 border-dashed border-[#e9ecef] bg-[#f8f9fa] shadow-sm"
           style={{ borderRadius: "12px 4px 10px 4px / 4px 10px 4px 12px" }}
         >
           <div className="bg-[#e0d6ff] p-4 rounded-full mb-4">

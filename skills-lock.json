@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "clerk-nextjs-patterns": {
+      "source": "clerk/skills",
+      "sourceType": "github",
+      "computedHash": "bc6a67a7a9daf4edf969d529d27ff64dea79b597c20d97d36eac52804934c78b"
+    }
+  }
+}

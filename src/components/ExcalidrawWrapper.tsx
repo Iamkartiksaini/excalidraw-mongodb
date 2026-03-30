@@ -186,7 +186,7 @@ function CustomToolbar({
   isPublic,
 }: any) {
   return (
-    <div className="absolute h-11 top-4 Island App-toolbar left-[100px] z-[50] 
+    <div className="absolute h-11 bottom-4 left-1/2 -translate-x-1/2 Island App-toolbar  z-50 
     flex items-center gap-1.5 bg-white p-1 rounded-[.5rem]  border border-[#e9ecef] pointer-events-auto"
 
       style={{ boxShadow: "0px 0px .931014px 0px #0000002b, 0px 0px 3.12708px 0px #00000014, 0px 7px 14px 0px #0000000d" }}

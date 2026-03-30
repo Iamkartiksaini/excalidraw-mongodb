@@ -32,13 +32,6 @@ export default function Navbar() {
 
         {/* Nav Links + Auth */}
         <div className="flex items-center gap-4">
-          <Link
-            href="/draw"
-            className="text-sm font-medium text-[#1e1e1e] hover:bg-[#f3f4f6] transition-colors py-2 px-3 rounded-lg flex items-center gap-2"
-            style={{ fontFamily: "'Virgil', cursive" }}
-          >
-            New Drawing
-          </Link>
 
           <Show when="signed-in">
             <Link

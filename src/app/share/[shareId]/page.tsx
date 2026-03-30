@@ -1,17 +1,14 @@
+"use client"
 import { getPublicDrawing } from "@/actions/drawingActions";
 import dynamic from "next/dynamic";
 import { notFound } from "next/navigation";
 import { Move, Lock } from "lucide-react";
-
-const Excalidraw = dynamic(
-  async () => (await import("@excalidraw/excalidraw")).Excalidraw,
-  { ssr: false }
-);
+import { Excalidraw } from "@excalidraw/excalidraw"
 
 interface SharePageProps {
-  params: {
+  params: Promise<{
     shareId: string;
-  };
+  }>;
 }
 
 export default async function SharePage({ params }: SharePageProps) {
@@ -26,7 +23,7 @@ export default async function SharePage({ params }: SharePageProps) {
           <Lock className="w-4 h-4 text-zinc-400" />
           <h1 className="font-bold text-lg">{drawing.title}</h1>
           <span className="px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-500 text-xs font-semibold">
-             READ ONLY
+            READ ONLY
           </span>
         </div>
 

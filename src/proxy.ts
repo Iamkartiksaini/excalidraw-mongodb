@@ -3,7 +3,6 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 // Only protect dashboard + authenticated API routes
 // /draw (guest), /draw/[id] (owner-checked at action level), /share/[shareId] are public
 const isProtectedRoute = createRouteMatcher([
-  "/dashboard(.*)",
   "/api/drawings(.*)",
 ]);
 

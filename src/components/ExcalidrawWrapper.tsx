@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { updateDrawing, togglePublic, renameDrawing } from "@/actions/drawingActions";
 import { Save, Loader2, Check, Globe, Lock } from "lucide-react";
 import { toast } from "sonner";
-import { saveGuestDrawing, loadGuestDrawing } from "@/lib/guestStorage";
+import { saveGuestDrawing } from "@/lib/guestStorage";
 
 // Dynamically import with SSR disabled — required for Excalidraw
 const ExcalidrawComponent = dynamic(
@@ -49,45 +49,22 @@ export default function ExcalidrawWrapper({ initialData, isGuest = false }: Exca
   useEffect(() => { appStateRef.current = appState; }, [appState]);
   useEffect(() => { titleRef.current = title; }, [title]);
 
-  // Load persisted guest data from IndexedDB on mount
+  // Guest data is now pre-loaded by the page component and passed as initialData.
+  // We just set guestSavedOnce to true if initialData elements are present and it's a guest.
   useEffect(() => {
-    if (!isGuest) return;
-
-    loadGuestDrawing().then((record) => {
-      if (!record) return;
-
-      // Update local state
-      setElements(record.elements);
-      setAppState(record.appState);
-      setTitle(record.title);
+    if (isGuest && initialData.elements.length > 0) {
       setGuestSavedOnce(true);
-
-      // Hydrate the live canvas once the Excalidraw API is ready
-      const tryUpdate = () => {
-        if (excalidrawAPI.current) {
-          excalidrawAPI.current.updateScene({
-            elements: record.elements,
-            appState: { ...record.appState, viewBackgroundColor: "#ffffff" },
-          });
-        } else {
-          // Retry until the API is mounted
-          setTimeout(tryUpdate, 100);
-        }
-      };
-      tryUpdate();
-    }).catch(() => {
-      // Silently fail — guest just starts with a blank canvas
-    });
-  }, [isGuest]);
+    }
+  }, [isGuest, initialData]);
 
   const persistToIndexedDB = useCallback(async (els: any[], state: any, ttl: string) => {
     try {
-      await saveGuestDrawing({ elements: els, appState: state, title: ttl });
+      await saveGuestDrawing({ id: initialData._id, elements: els, appState: state, title: ttl });
       setGuestSavedOnce(true);
     } catch {
       // Auto-save failures are silent; manual save will show an error
     }
-  }, []);
+  }, [initialData._id]);
 
   const handleTitleBlur = async () => {
     if (title !== prevTitleRef.current) {
@@ -111,6 +88,7 @@ export default function ExcalidrawWrapper({ initialData, isGuest = false }: Exca
     try {
       if (isGuest) {
         await saveGuestDrawing({
+          id: initialData._id,
           elements: elementsRef.current,
           appState: appStateRef.current,
           title: titleRef.current,

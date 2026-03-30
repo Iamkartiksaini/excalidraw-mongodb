@@ -12,8 +12,9 @@ const robotoSlabHeading = Roboto_Slab({ subsets: ['latin'], variable: '--font-he
 const raleway = Raleway({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
-  title: "Excalidraw-MongoDB",
-  description: "A free virtual whiteboard with cloud sync and sharing.",
+  title: "Excali-Draw — Collaborative Whiteboard with MongoDB",
+  description: "A premium, hand-drawn style virtual whiteboard with real-time cloud sync powered by MongoDB. Sketch, collaborate, and save your ideas effortlessly.",
+  keywords: ["Excalidraw", "MongoDB", "Whiteboard", "Collaboration", "Real-time Sync", "Digital Sketching"],
 };
 
 export default function RootLayout({
@@ -22,16 +23,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <html lang="en" className={cn("font-sans", raleway.variable, robotoSlabHeading.variable)}>
-        <body className="min-h-screen flex flex-col bg-white text-[#212529]">
+    <html lang="en" className={cn("font-sans", raleway.variable, robotoSlabHeading.variable)}>
+      <body className="min-h-screen flex flex-col bg-white text-[#212529]">
+        <ClerkProvider>
           <Navbar />
           <main className="flex-1 flex flex-col overflow-hidden">
             {children}
           </main>
           <Toaster position="bottom-right" richColors />
-        </body>
-      </html>
-    </ClerkProvider>
+        </ClerkProvider>
+      </body>
+    </html>
   );
 }

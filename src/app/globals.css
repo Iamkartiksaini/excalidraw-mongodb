@@ -11,8 +11,7 @@ body {
 /* Excalidraw uses Virgil as its hand-drawn font */
 @font-face {
   font-family: "Virgil";
-  src: url("https://unpkg.com/@excalidraw/excalidraw/dist/excalidraw-assets/Virgil.woff2")
-    format("woff2");
+  src: url("/fonts/Virgil.woff2") format("woff2");
   font-display: swap;
 }
 
@@ -44,7 +43,7 @@ nextjs-portal {
   --chart-3: oklch(0.648 0.2 131.684);
   --chart-4: oklch(0.532 0.157 131.589);
   --chart-5: oklch(0.453 0.124 130.933);
-  --radius: 0;
+  --radius: 0.2rem;
   --sidebar: oklch(0.986 0.002 67.8);
   --sidebar-foreground: oklch(0.147 0.004 49.3);
   --sidebar-primary: oklch(0.541 0.281 293.009);

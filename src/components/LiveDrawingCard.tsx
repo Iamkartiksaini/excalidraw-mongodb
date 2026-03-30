@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Clock, MoreVertical, Pencil, Trash2, Edit2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { deleteDrawing, renameDrawing } from "@/actions/drawingActions";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Link from "next/link";
 import {
@@ -27,6 +28,7 @@ interface LiveDrawingCardProps {
 
 export default function LiveDrawingCard({ drawing }: LiveDrawingCardProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -54,7 +56,7 @@ export default function LiveDrawingCard({ drawing }: LiveDrawingCardProps) {
     try {
       await deleteDrawing(drawing._id);
       toast.success("Drawing deleted successfully");
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["drawings", "live"] });
     } catch (error) {
       toast.error("Failed to delete drawing");
     } finally {
@@ -77,7 +79,7 @@ export default function LiveDrawingCard({ drawing }: LiveDrawingCardProps) {
       await renameDrawing(drawing._id, trimmedTitle);
       toast.success("Drawing renamed successfully");
       setIsRenaming(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["drawings", "live"] });
     } catch (error) {
       toast.error("Failed to rename drawing");
     }
@@ -130,12 +132,12 @@ export default function LiveDrawingCard({ drawing }: LiveDrawingCardProps) {
     >
       {/* Clickable area for the card */}
       {!isRenaming && (
-        <Link href={`/draw/live/${drawing._id}`} className="absolute inset-0 z-0" aria-label={`Open ${drawing.title}`} />
+        <Link href={`/draw/live/${drawing._id}?from=live`} className="absolute inset-0 z-0" aria-label={`Open ${drawing.title}`} />
       )}
 
       {/* Preview area */}
       <div
-        className="aspect-[4/3] bg-[#f8f9fa] border-b-2 border-dashed border-[#e9ecef] flex items-center justify-center group-hover:bg-[#f3f0ff] transition-colors relative z-0 pointer-events-none"
+        className="aspect-4/3 bg-[#f8f9fa] border-b-2 border-dashed border-[#e9ecef] flex items-center justify-center group-hover:bg-[#f3f0ff] transition-colors relative z-0 pointer-events-none"
         style={{ borderRadius: "6px 2px 0px 0px / 3px 6px 0px 0px" }}
       >
         <Pencil className="w-8 h-8 text-[#dee2e6] group-hover:text-[#6965db] transition-colors opacity-50 group-hover:opacity-100" />

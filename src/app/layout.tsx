@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   keywords: ["Excalidraw", "MongoDB", "Whiteboard", "Collaboration", "Real-time Sync", "Digital Sketching"],
 };
 
+import QueryProvider from "@/components/QueryProvider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -26,11 +28,14 @@ export default function RootLayout({
     <html lang="en" className={cn("font-sans", raleway.variable, robotoSlabHeading.variable)}>
       <body className="min-h-screen flex flex-col bg-white text-[#212529]">
         <ClerkProvider>
+          <QueryProvider>
           <Navbar />
-          <main className="flex-1 flex flex-col overflow-hidden">
+            <main
+              className="flex-1 flex flex-col h-full">
             {children}
           </main>
           <Toaster position="bottom-right" richColors />
+          </QueryProvider>
         </ClerkProvider>
       </body>
     </html>

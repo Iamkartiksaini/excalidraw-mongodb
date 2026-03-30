@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { updateDrawing, togglePublic, renameDrawing } from "@/actions/drawingActions";
-import { Save, Loader2, Check, Globe, Lock } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { saveGuestDrawing } from "@/lib/guestStorage";
+import CustomToolbar from "./CustomToolbar";
 
 // Dynamically import with SSR disabled — required for Excalidraw
 const ExcalidrawComponent = dynamic(
@@ -24,6 +25,7 @@ interface ExcalidrawWrapperProps {
     title: string;
     isPublic: boolean;
     shareId: string;
+    updatedAt?: string
   };
   isGuest?: boolean;
 }
@@ -132,8 +134,17 @@ export default function ExcalidrawWrapper({ initialData, isGuest = false }: Exca
     }
   };
 
+  const searchParams = useSearchParams();
+  const from = searchParams.get("from") || (isGuest ? "local" : "live");
+
+  console.log("updatedAt", initialData.updatedAt)
+
   return (
-    <div style={{ height: "calc(100vh - 56px)", width: "100%", position: "relative" }}>
+    <div style={{
+      height: "calc(100vh - var(--navbar-height, 56px))",
+      transformOrigin: "bottom center",
+      width: "100%", position: "relative"
+    }}>
       <CustomToolbar
         title={title}
         setTitle={setTitle}
@@ -145,6 +156,8 @@ export default function ExcalidrawWrapper({ initialData, isGuest = false }: Exca
         guestSavedOnce={guestSavedOnce}
         handleShare={handleShare}
         isPublic={isPublic}
+        from={from}
+        updatedAt={initialData.updatedAt}
       />
       <ExcalidrawComponent
         excalidrawAPI={(api) => (excalidrawAPI.current = api)}
@@ -168,86 +181,6 @@ export default function ExcalidrawWrapper({ initialData, isGuest = false }: Exca
           }
         }}
       />
-    </div>
-  );
-}
-
-
-function CustomToolbar({
-  title,
-  setTitle,
-  handleTitleBlur,
-  handleSave,
-  isSaving,
-  saveSuccess,
-  isGuest,
-  guestSavedOnce,
-  handleShare,
-  isPublic,
-}: any) {
-  return (
-    <div className="absolute h-11 bottom-4 left-1/2 -translate-x-1/2 Island App-toolbar  z-50 
-    flex items-center gap-1.5 bg-white p-1 rounded-[.5rem]  border border-[#e9ecef] pointer-events-auto"
-
-      style={{ boxShadow: "0px 0px .931014px 0px #0000002b, 0px 0px 3.12708px 0px #00000014, 0px 7px 14px 0px #0000000d" }}
-    >
-      {/* Title */}
-      <input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        onBlur={handleTitleBlur}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.currentTarget.blur();
-          }
-        }}
-        className="px-2 py-1 text-sm font-bold text-[#1e1e1e] border border-transparent hover:border-[#e9ecef] rounded-lg outline-none w-30 focus:w-52 transition-all bg-transparent"
-        placeholder="Untitled..."
-        style={{ fontFamily: "'Virgil', cursive" }}
-        aria-label="Drawing title"
-      />
-
-      <div className="w-px h-5 bg-[#e9ecef] mx-1" />
-
-      {/* Save button */}
-      <button
-        onClick={handleSave}
-        disabled={isSaving}
-        title={isGuest ? "Save to browser" : "Save (Ctrl+S)"}
-        className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-[#6965db] hover:bg-[#f3f0ff] rounded-lg transition-colors disabled:opacity-40"
-        style={{ fontFamily: "'Virgil', cursive" }}
-      >
-        {isSaving ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : saveSuccess ? (
-          <Check className="w-4 h-4 text-[#2f9e44]" />
-        ) : (
-          <Save className="w-4 h-4" />
-        )}
-        {saveSuccess ? "Saved!" : "Save"}
-      </button>
-
-      {/* Share button */}
-      <button
-        onClick={handleShare}
-        title={isPublic ? "Make private" : "Share publicly"}
-        className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors ${isPublic ? "text-[#2f9e44] hover:bg-[#ebfbee]" : "text-[#868e96] bg-sky-50 hover:bg-[#f8f9fa]"
-          }`}
-      >
-        {isPublic ? <Globe className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-      </button>
-
-      {/* Guest indicator */}
-      {isGuest && (
-        <span
-          className="ml-2 px-2 py-0.5 text-xs bg-[#fff9db] border border-[#f59f00] text-[#e67700] rounded-full whitespace-nowrap font-medium"
-          style={{ fontFamily: "'Virgil', cursive" }}
-        >
-          {guestSavedOnce
-            ? "Guest · saved locally"
-            : "Guest · changes not cloud saved"}
-        </span>
-      )}
     </div>
   );
 }

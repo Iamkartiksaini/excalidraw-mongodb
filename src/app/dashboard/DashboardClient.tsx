@@ -1,50 +1,49 @@
 "use client";
 
-import { useEffect, useState, useCallback, useTransition, Suspense, lazy } from "react";
-import { PenLine, Loader2 } from "lucide-react";
+import { Suspense, lazy, useEffect } from "react";
+import { PenLine } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LocalDrawingCard from "@/components/LocalDrawingCard";
 import CreateLiveButton from "@/components/CreateLiveButton";
 import CreateLocalButton from "@/components/CreateLocalButton";
-import { getAllGuestDrawings, GuestDrawingRecord } from "@/lib/guestStorage";
+import { getAllGuestDrawings } from "@/lib/guestStorage";
 import { getUserDrawings } from "@/actions/drawingActions";
+import { useQuery } from "@tanstack/react-query";
+import { useSearchParams, useRouter } from "next/navigation";
+import DrawingCardSkeleton from "@/components/DrawingCardSkeleton";
 
 const LiveDrawingCard = lazy(() => import("@/components/LiveDrawingCard"));
 
 export default function DashboardClient() {
   const { isSignedIn, isLoaded } = useUser();
-  const [localDrawings, setLocalDrawings] = useState<GuestDrawingRecord[]>([]);
-  const [serverDrawings, setServerDrawings] = useState<any[]>([]);
-  const [hasFetchedServer, setHasFetchedServer] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const activeTab = searchParams.get("tab") || "local";
 
-  const fetchLocalDrawings = useCallback(async () => {
-    try {
-      const records = await getAllGuestDrawings();
-      setLocalDrawings(records);
-    } catch (e) {
-      console.error("Failed to load local drawings:", e);
-    }
-  }, []);
+  const {
+    data: localDrawings = [],
+    isLoading: isLocalLoading,
+    refetch: refetchLocal
+  } = useQuery({
+    queryKey: ["drawings", "local"],
+    queryFn: getAllGuestDrawings,
+  });
+
+  const {
+    data: serverDrawings = [],
+    isLoading: isServerLoading,
+  } = useQuery({
+    queryKey: ["drawings", "live"],
+    queryFn: getUserDrawings,
+    enabled: isSignedIn && activeTab === "live",
+  });
 
   const handleTabChange = (value: string) => {
-    if (value === "live" && !hasFetchedServer && !isPending) {
-      startTransition(async () => {
-        try {
-          const drawings = await getUserDrawings();
-          setServerDrawings(drawings);
-          setHasFetchedServer(true);
-        } catch (e) {
-          console.error("Failed to load server drawings:", e);
-        }
-      });
-    }
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", value);
+    router.push(`?${params.toString()}`);
   };
-
-  useEffect(() => {
-    fetchLocalDrawings();
-  }, [fetchLocalDrawings]);
 
   if (!isLoaded) {
     return (
@@ -65,10 +64,15 @@ export default function DashboardClient() {
           >
             My Local Drawings
           </h1>
-          {/* Header button removed as per PR request, keeping layout consistent with Tabs view */}
         </div>
 
-        {localDrawings.length === 0 ? (
+        {isLocalLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <DrawingCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : localDrawings.length === 0 ? (
           <EmptyState type="local" />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -77,7 +81,7 @@ export default function DashboardClient() {
                 key={drawing.key}
                 drawing={drawing}
                 isLoggedIn={false}
-                onUpdate={fetchLocalDrawings}
+                onUpdate={() => refetchLocal()}
               />
             ))}
             <CreateLocalButton asCard />
@@ -99,7 +103,7 @@ export default function DashboardClient() {
         </h1>
       </div>
 
-      <Tabs defaultValue="local" className="w-full" onValueChange={handleTabChange}>
+      <Tabs value={activeTab} className="w-full" onValueChange={handleTabChange}>
         <TabsList className="mb-8 p-1 bg-[#f3f0ff] border-2 border-[#e9ecef]" style={{ borderRadius: "8px 2px 7px 3px / 3px 7px 2px 8px", fontFamily: "'Virgil', cursive" }}>
           <TabsTrigger
             value="live"
@@ -117,18 +121,20 @@ export default function DashboardClient() {
 
         {/* LIVE TAB CONTENT */}
         <TabsContent value="live" className="mt-0 outline-none">
-          {!hasFetchedServer ? (
-            <div className="flex flex-col items-center justify-center py-24 gap-4 text-[#868e96]">
-              <Loader2 className="w-10 h-10 animate-spin text-[#6965db]" />
-              <p style={{ fontFamily: "'Virgil', cursive" }}>Fetching from cloud...</p>
+          {isServerLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[...Array(4)].map((_, i) => (
+                <DrawingCardSkeleton key={i} />
+              ))}
             </div>
           ) : serverDrawings.length === 0 ? (
             <EmptyState type="live" />
           ) : (
             <Suspense fallback={
-              <div className="flex flex-col items-center justify-center py-24 gap-4 text-[#868e96]">
-                <Loader2 className="w-10 h-10 animate-spin text-[#6965db]" />
-                <p style={{ fontFamily: "'Virgil', cursive" }}>Fetching from cloud...</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, i) => (
+                  <DrawingCardSkeleton key={i} />
+                ))}
               </div>
             }>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -143,7 +149,13 @@ export default function DashboardClient() {
 
         {/* LOCAL TAB CONTENT */}
         <TabsContent value="local" className="mt-0 outline-none">
-          {localDrawings.length === 0 ? (
+          {isLocalLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[...Array(4)].map((_, i) => (
+                <DrawingCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : localDrawings.length === 0 ? (
             <EmptyState type="local" />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -153,7 +165,7 @@ export default function DashboardClient() {
                   key={drawing.key}
                   drawing={drawing}
                   isLoggedIn={true}
-                  onUpdate={fetchLocalDrawings}
+                  onUpdate={() => refetchLocal()}
                 />
               ))}
             </div>

@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import ExcalidrawWrapper from "@/components/ExcalidrawWrapper";
 import { loadGuestDrawing } from "@/lib/guestStorage";
-import { notFound } from "next/navigation";
 import { use } from "react";
 
 const DEFAULT_GUEST_DATA = {
@@ -19,6 +18,7 @@ export default function LocalDrawingPage({ params }: { params: Promise<{ id: str
   
   const [guestData, setGuestData] = useState<any>(null);
   const [ready, setReady] = useState(false);
+  
   useEffect(() => {
     loadGuestDrawing(id)
       .then((record) => {
@@ -32,7 +32,6 @@ export default function LocalDrawingPage({ params }: { params: Promise<{ id: str
             updatedAt: record.updatedAt,
           });
         } else {
-          // If no record exists, it's a new drawing! Set the initial data with the ID.
           setGuestData({
             ...DEFAULT_GUEST_DATA,
             _id: id,
@@ -40,7 +39,6 @@ export default function LocalDrawingPage({ params }: { params: Promise<{ id: str
         }
       })
       .catch(() => {
-        // Fallback to empty context on indexedDB errors to allow drawing seamlessly
         setGuestData({
           ...DEFAULT_GUEST_DATA,
           _id: id,
@@ -59,5 +57,15 @@ export default function LocalDrawingPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  return <ExcalidrawWrapper initialData={guestData} isGuest={true} />;
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center" style={{ height: "calc(100vh - 56px)" }}>
+        <span className="text-sm text-[#868e96]" style={{ fontFamily: "'Virgil', cursive" }}>
+          Loading editor…
+        </span>
+      </div>
+    }>
+      <ExcalidrawWrapper initialData={guestData} isGuest={true} />
+    </Suspense>
+  );
 }

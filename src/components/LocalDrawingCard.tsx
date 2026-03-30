@@ -16,7 +16,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { deleteGuestDrawing, renameGuestDrawing, loadGuestDrawing } from "@/lib/guestStorage";
-import { createDrawing, updateDrawing } from "@/actions/drawingActions";
+import { createDrawing, migrateLocalToCloud } from "@/actions/drawingActions";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface LocalDrawingCardProps {
   drawing: {
@@ -30,6 +31,7 @@ interface LocalDrawingCardProps {
 
 export default function LocalDrawingCard({ drawing, isLoggedIn, onUpdate }: LocalDrawingCardProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -98,22 +100,16 @@ export default function LocalDrawingCard({ drawing, isLoggedIn, onUpdate }: Loca
       const fullData = await loadGuestDrawing(drawing.key);
       if (!fullData) throw new Error("Could not load drawing data");
 
-      // 2. Create blank cloud drawing with the same title
-      const newCloudDrawing = await createDrawing(fullData.title);
-
-      // 3. Update the cloud drawing with elements & appState
-      await updateDrawing(newCloudDrawing._id, {
+      // 2. Securely migrate to cloud in a single step
+      await migrateLocalToCloud({
+        title: fullData.title,
         elements: fullData.elements,
         appState: fullData.appState,
-        title: fullData.title,
       });
 
-      // 4. Delete the local drawing to avoid duplicates
-      await deleteGuestDrawing(drawing.key);
-      
-      toast.success("Drawing uploaded to Cloud successfully!");
-      onUpdate(); // Trigger re-render to remove from Local tab
-      router.refresh(); // Trigger re-render of Server Components (Cloud tab)
+      toast.success("Drawing uploaded to Cloud! Local copy preserved.");
+      onUpdate(); // Refresh the list
+      queryClient.invalidateQueries({ queryKey: ["drawings", "live"] });
     } catch (error) {
       console.error(error);
       toast.error("Failed to upload drawing to cloud");
@@ -169,12 +165,12 @@ export default function LocalDrawingCard({ drawing, isLoggedIn, onUpdate }: Loca
     >
       {/* Clickable area for the card */}
       {!isRenaming && (
-        <Link href={`/draw/local/${drawing.key}`} className="absolute inset-0 z-0" aria-label={`Open ${drawing.title}`} />
+        <Link href={`/draw/local/${drawing.key}?from=local`} className="absolute inset-0 z-0" aria-label={`Open ${drawing.title}`} />
       )}
 
       {/* Preview area */}
       <div
-        className="aspect-[4/3] bg-[#fff9db] border-b-2 border-dashed border-[#e9ecef] flex items-center justify-center group-hover:bg-[#ffec99] transition-colors relative z-0 pointer-events-none"
+        className="aspect-4/3 bg-[#fff9db] border-b-2 border-dashed border-[#e9ecef] flex items-center justify-center group-hover:bg-[#ffec99] transition-colors relative z-0 pointer-events-none"
         style={{ borderRadius: "6px 2px 0px 0px / 3px 6px 0px 0px" }}
       >
         <Pencil className="w-8 h-8 text-[#fcc419] group-hover:text-[#e67700] transition-colors opacity-50 group-hover:opacity-100" />

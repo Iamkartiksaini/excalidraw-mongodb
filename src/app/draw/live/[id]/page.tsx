@@ -1,6 +1,7 @@
 import { getDrawingById } from "@/actions/drawingActions";
 import ExcalidrawWrapper from "@/components/ExcalidrawWrapper";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 
 interface DrawingPageProps {
   params: Promise<{
@@ -13,7 +14,15 @@ export default async function DrawingPage({ params }: DrawingPageProps) {
     const { id } = await params;
     const drawing = await getDrawingById(id);
 
-    return <ExcalidrawWrapper initialData={drawing} />;
+    return (
+      <Suspense fallback={
+        <div className="flex items-center justify-center flex-1 bg-white">
+          <span className="text-sm text-[#868e96]" style={{ fontFamily: "'Virgil', cursive" }}>Loading board…</span>
+        </div>
+      }>
+        <ExcalidrawWrapper initialData={drawing} />
+      </Suspense>
+    );
   } catch (error: any) {
     if (error.message === "Drawing not found") {
       notFound();

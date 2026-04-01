@@ -42,6 +42,18 @@ export default function Navbar() {
 
         {/* Nav Links + Auth */}
         <div className="flex items-center gap-4">
+          <a target="_blank" href="https://github.com/Iamkartiksaini/excalidraw-mongodb"
+            style={{ fontFamily: "'Virgil', cursive" }}
+            className="border border-gray-200 rounded-lg  py-2 px-3 h-9 hover:bg-[#d5d5f2]  flex items-center gap-2"
+          >
+            <Image height={24} width={24}
+              style={{ filter: "invert(1)" }}
+              alt="github" src={"/icons/icons8-github.svg"}
+            />
+            <span>
+              Star Repo
+            </span>
+          </a>
           <Link
             href="/dashboard"
             className="text-sm font-medium text-[#1e1e1e] hover:bg-[#f3f4f6] transition-colors py-2 px-3 rounded-lg flex items-center gap-2"

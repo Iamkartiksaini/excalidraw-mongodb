@@ -1,10 +1,7 @@
-"use client"
 import { getPublicDrawing } from "@/actions/drawingActions";
-import dynamic from "next/dynamic";
 import { notFound } from "next/navigation";
-import { Move, Lock } from "lucide-react";
-import { Excalidraw } from "@excalidraw/excalidraw"
-
+import { Lock } from "lucide-react";
+import ShareExcalidrawClient from "./ShareExcalidrawClient";
 interface SharePageProps {
   params: Promise<{
     shareId: string;
@@ -28,13 +25,7 @@ export default async function SharePage({ params }: SharePageProps) {
         </div>
 
         <div className="flex-1">
-          <Excalidraw
-            initialData={{
-              elements: drawing.elements,
-              appState: { ...drawing.appState, viewModeEnabled: true, viewBackgroundColor: "#ffffff" },
-            }}
-            viewModeEnabled={true}
-          />
+          <ShareExcalidrawClient drawing={drawing} />
         </div>
 
         {/* Floating CTA */}

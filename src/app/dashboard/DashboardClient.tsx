@@ -1,14 +1,17 @@
 "use client";
 
 import { Suspense, lazy, useEffect } from "react";
-import { PenLine } from "lucide-react";
+import { PenLine, FileText } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LocalDrawingCard from "@/components/LocalDrawingCard";
 import CreateLiveButton from "@/components/CreateLiveButton";
 import CreateLocalButton from "@/components/CreateLocalButton";
-import { getAllGuestDrawings } from "@/lib/guestStorage";
+import CreateNoteButton from "@/components/CreateNoteButton";
+import NoteCard from "@/components/NoteCard";
+import { getAllGuestDrawings, getAllGuestNotes, GuestNoteRecord } from "@/lib/guestStorage";
 import { getUserDrawings } from "@/actions/drawingActions";
+import { getUserNotes } from "@/actions/noteActions";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import DrawingCardSkeleton from "@/components/DrawingCardSkeleton";
@@ -39,6 +42,25 @@ export default function DashboardClient() {
     enabled: isSignedIn && activeTab === "live",
   });
 
+  const {
+    data: cloudNotes = [],
+    isLoading: isCloudNotesLoading,
+    refetch: refetchCloudNotes,
+  } = useQuery({
+    queryKey: ["notes", "cloud"],
+    queryFn: getUserNotes,
+    enabled: isSignedIn && activeTab === "notes",
+  });
+
+  const {
+    data: localNotes = [],
+    isLoading: isLocalNotesLoading,
+    refetch: refetchLocalNotes,
+  } = useQuery({
+    queryKey: ["notes", "local"],
+    queryFn: getAllGuestNotes,
+  });
+
   const handleTabChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", value);
@@ -53,43 +75,86 @@ export default function DashboardClient() {
     );
   }
 
-  // If NOT signed in, directly show the local drawings grid without tabs
+  // If NOT signed in, show tabs with local drawings + notes
   if (!isSignedIn) {
     return (
       <div className="max-w-7xl mx-auto pt-10 px-4 pb-20 w-full">
-        <div className="flex items-center justify-between mb-10">
+        <div className="flex items-center justify-between mb-8">
           <h1
             className="text-3xl font-bold text-[#1e1e1e] tracking-tight"
             style={{ fontFamily: "'Virgil', cursive" }}
           >
-            My Local Drawings
+            My Dashboard
           </h1>
         </div>
 
-        {isLocalLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <DrawingCardSkeleton key={i} />
-            ))}
-          </div>
-        ) : localDrawings.length === 0 ? (
-          <EmptyState type="local" />
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <Tabs value={activeTab} className="w-full" onValueChange={handleTabChange}>
+          <TabsList className="mb-8 p-1 bg-[#f3f0ff] border-2 border-[#e9ecef]" style={{ borderRadius: "8px 2px 7px 3px / 3px 7px 2px 8px", fontFamily: "'Virgil', cursive" }}>
+            <TabsTrigger
+              value="local"
+              className="data-[state=active]:bg-white data-[state=active]:text-[#f59f00] data-[state=active]:shadow-sm text-[#495057] transition-all font-semibold rounded-md flex-1 px-6"
+            >
+              Local Drawings {localDrawings.length > 0 && `(${localDrawings.length})`}
+            </TabsTrigger>
+            <TabsTrigger
+              value="notes"
+              className="data-[state=active]:bg-white data-[state=active]:text-[#6965db] data-[state=active]:shadow-sm text-[#495057] transition-all font-semibold rounded-md flex-1 px-6 flex items-center gap-1.5"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              Notes {localNotes.length > 0 && `(${localNotes.length})`}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="local" className="mt-0 outline-none">
+            {isLocalLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, i) => <DrawingCardSkeleton key={i} />)}
+              </div>
+            ) : localDrawings.length === 0 ? (
+              <EmptyState type="local" />
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 <CreateLocalButton asCard />
-            {localDrawings.map((drawing) => (
-              <LocalDrawingCard
-                key={drawing.key}
-                drawing={drawing}
-                isLoggedIn={false}
-                onUpdate={() => refetchLocal()}
-              />
-            ))}
-          </div>
-        )}
+                {localDrawings.map((drawing) => (
+                  <LocalDrawingCard
+                    key={drawing.key}
+                    drawing={drawing}
+                    isLoggedIn={false}
+                    onUpdate={() => refetchLocal()}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="notes" className="mt-0 outline-none">
+            {isLocalNotesLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {[...Array(2)].map((_, i) => <DrawingCardSkeleton key={i} />)}
+              </div>
+            ) : localNotes.length === 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <CreateNoteButton asCard />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <CreateNoteButton asCard />
+                {localNotes.map((note: GuestNoteRecord) => (
+                  <NoteCard
+                    key={note.key}
+                    note={{ key: note.key, title: note.title, content: note.content, updatedAt: note.updatedAt }}
+                    isGuest
+                    onDelete={() => refetchLocalNotes()}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     );
   }
+
 
   // If signed in, show Tabs
   return (
@@ -107,15 +172,22 @@ export default function DashboardClient() {
         <TabsList className="mb-8 p-1 bg-[#f3f0ff] border-2 border-[#e9ecef]" style={{ borderRadius: "8px 2px 7px 3px / 3px 7px 2px 8px", fontFamily: "'Virgil', cursive" }}>
           <TabsTrigger
             value="live"
-            className="data-[state=active]:bg-white data-[state=active]:text-[#6965db] data-[state=active]:shadow-sm text-[#495057] transition-all font-semibold rounded-md flex-1 px-8"
+            className="data-[state=active]:bg-white data-[state=active]:text-[#6965db] data-[state=active]:shadow-sm text-[#495057] transition-all font-semibold rounded-md flex-1 px-6"
           >
             Cloud Drawings
           </TabsTrigger>
           <TabsTrigger
             value="local"
-            className="data-[state=active]:bg-white data-[state=active]:text-[#f59f00] data-[state=active]:shadow-sm text-[#495057] transition-all font-semibold rounded-md flex-1 px-8"
+            className="data-[state=active]:bg-white data-[state=active]:text-[#f59f00] data-[state=active]:shadow-sm text-[#495057] transition-all font-semibold rounded-md flex-1 px-6"
           >
             Local Drawings {localDrawings.length > 0 && `(${localDrawings.length})`}
+          </TabsTrigger>
+          <TabsTrigger
+            value="notes"
+            className="data-[state=active]:bg-white data-[state=active]:text-[#6965db] data-[state=active]:shadow-sm text-[#495057] transition-all font-semibold rounded-md flex-1 px-6 flex items-center gap-1.5"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            Notes {(cloudNotes.length + localNotes.length) > 0 && `(${cloudNotes.length + localNotes.length})`}
           </TabsTrigger>
         </TabsList>
 
@@ -166,6 +238,61 @@ export default function DashboardClient() {
                   drawing={drawing}
                   isLoggedIn={true}
                   onUpdate={() => refetchLocal()}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+        {/* NOTES TAB CONTENT */}
+        <TabsContent value="notes" className="mt-0 outline-none">
+          {/* Cloud notes section */}
+          {isSignedIn && (
+            <>
+              <p className="text-xs font-semibold text-[#adb5bd] uppercase tracking-widest mb-4">Cloud Notes</p>
+              {isCloudNotesLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+                  {[...Array(4)].map((_, i) => <DrawingCardSkeleton key={i} />)}
+                </div>
+              ) : cloudNotes.length === 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+                  <CreateNoteButton asCard />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+                  <CreateNoteButton asCard />
+                  {cloudNotes.map((note: any) => (
+                    <NoteCard
+                      key={note._id}
+                      note={note}
+                      isGuest={false}
+                      onDelete={() => refetchCloudNotes()}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Local notes section */}
+          <p className="text-xs font-semibold text-[#adb5bd] uppercase tracking-widest mb-4">Local Notes</p>
+          {isLocalNotesLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[...Array(2)].map((_, i) => <DrawingCardSkeleton key={i} />)}
+            </div>
+          ) : localNotes.length === 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <CreateNoteButton asCard isLocal />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <CreateNoteButton asCard isLocal />
+              {localNotes.map((note: GuestNoteRecord) => (
+                <NoteCard
+                  key={note.key}
+                  note={{ key: note.key, title: note.title, content: note.content, updatedAt: note.updatedAt }}
+                  isGuest
+                  onDelete={() => refetchLocalNotes()}
+                  onMigrate={() => { refetchLocalNotes(); refetchCloudNotes(); }}
                 />
               ))}
             </div>

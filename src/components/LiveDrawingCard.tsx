@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Clock, MoreVertical, Pencil, Trash2, Edit2 } from "lucide-react";
+import { Clock, MoreVertical, Pencil, Trash2, Edit2, Globe, Lock, Link as LinkIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { deleteDrawing, renameDrawing } from "@/actions/drawingActions";
+import { deleteDrawing, renameDrawing, togglePublic } from "@/actions/drawingActions";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -23,6 +23,8 @@ interface LiveDrawingCardProps {
     _id: string;
     title: string;
     updatedAt: string;
+    isPublic: boolean;
+    shareId: string;
   };
 }
 
@@ -96,6 +98,32 @@ export default function LiveDrawingCard({ drawing }: LiveDrawingCardProps) {
     e.stopPropagation();
     setShowMenu(false);
     setIsRenaming(true);
+  };
+
+  const handleTogglePublic = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowMenu(false);
+    try {
+      await togglePublic(drawing._id, !drawing.isPublic);
+      toast.success(drawing.isPublic ? "Drawing set to private" : "Drawing is now public");
+      queryClient.invalidateQueries({ queryKey: ["drawings", "live"] });
+    } catch (error) {
+      toast.error("Failed to update sharing");
+    }
+  };
+
+  const handleCopyLink = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowMenu(false);
+    if (!drawing.shareId) {
+      toast.error("Share ID not found");
+      return;
+    }
+    const url = `${window.location.origin}/share/${drawing.shareId}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Link copied to clipboard!");
   };
 
   const updatedAt = new Date(drawing.updatedAt);
@@ -197,6 +225,22 @@ export default function LiveDrawingCard({ drawing }: LiveDrawingCardProps) {
                 <Edit2 className="w-4 h-4" />
                 Rename
               </div>
+              <div
+                onClick={handleTogglePublic}
+                className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-[#f3f0ff] hover:text-[#6965db] text-[#1e1e1e] transition-colors font-semibold cursor-pointer"
+              >
+                {drawing.isPublic ? <Lock className="w-4 h-4" /> : <Globe className="w-4 h-4" />}
+                {drawing.isPublic ? "Make private" : "Make public"}
+              </div>
+              {drawing.isPublic && (
+                <div
+                  onClick={handleCopyLink}
+                  className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-[#f3f0ff] hover:text-[#6965db] text-[#1e1e1e] transition-colors font-semibold cursor-pointer"
+                >
+                  <LinkIcon className="w-4 h-4" />
+                  Copy share link
+                </div>
+              )}
               <div
                 onClick={handleDeleteClick}
                 className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-[#ffe3e3] hover:text-[#fa5252] text-[#1e1e1e] transition-colors font-semibold cursor-pointer"

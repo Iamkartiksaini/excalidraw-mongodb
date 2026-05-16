@@ -1,11 +1,13 @@
 /**
- * IndexedDB persistence for guest (unauthenticated) drawings.
- * DB: "excalidraw-guest"  |  Store: "drawings"
+ * IndexedDB persistence for guest (unauthenticated) drawings and notes.
+ * DB: "excalidraw-guest"
+ * Stores: "drawings" (v1) | "notes" (v2)
  */
 
 const DB_NAME = "excalidraw-guest";
 const STORE_NAME = "drawings";
-const DB_VERSION = 1;
+const NOTES_STORE = "notes";
+const DB_VERSION = 2;
 
 export interface GuestDrawingRecord {
   key: string; // The ID of the drawing
@@ -23,6 +25,9 @@ function openDB(): Promise<IDBDatabase> {
       const db = (event.target as IDBOpenDBRequest).result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME, { keyPath: "key" });
+      }
+      if (!db.objectStoreNames.contains(NOTES_STORE)) {
+        db.createObjectStore(NOTES_STORE, { keyPath: "key" });
       }
     };
 
@@ -112,4 +117,82 @@ export async function renameGuestDrawing(id: string, newTitle: string): Promise<
     appState: record.appState,
     title: newTitle,
   });
+}
+
+// ─── Guest Notes (IndexedDB: notes store) ──────────────────────────────────
+
+export interface GuestNoteRecord {
+  key: string;
+  title: string;
+  content: string;
+  updatedAt: string;
+}
+
+export async function saveGuestNote(data: {
+  id: string;
+  title: string;
+  content: string;
+}): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(NOTES_STORE, "readwrite");
+    const store = tx.objectStore(NOTES_STORE);
+    const record: GuestNoteRecord = {
+      key: data.id,
+      title: data.title,
+      content: data.content,
+      updatedAt: new Date().toISOString(),
+    };
+    const req = store.put(record);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => db.close();
+  });
+}
+
+export async function loadGuestNote(id: string): Promise<GuestNoteRecord | null> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(NOTES_STORE, "readonly");
+    const store = tx.objectStore(NOTES_STORE);
+    const req = store.get(id);
+    req.onsuccess = () => resolve((req.result as GuestNoteRecord) ?? null);
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => db.close();
+  });
+}
+
+export async function getAllGuestNotes(): Promise<GuestNoteRecord[]> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(NOTES_STORE, "readonly");
+    const store = tx.objectStore(NOTES_STORE);
+    const req = store.getAll();
+    req.onsuccess = () => {
+      const results = (req.result as GuestNoteRecord[]).sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      );
+      resolve(results);
+    };
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => db.close();
+  });
+}
+
+export async function deleteGuestNote(id: string): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(NOTES_STORE, "readwrite");
+    const store = tx.objectStore(NOTES_STORE);
+    const req = store.delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => db.close();
+  });
+}
+
+export async function renameGuestNote(id: string, newTitle: string): Promise<void> {
+  const record = await loadGuestNote(id);
+  if (!record) throw new Error("Note not found");
+  await saveGuestNote({ id, title: newTitle, content: record.content });
 }

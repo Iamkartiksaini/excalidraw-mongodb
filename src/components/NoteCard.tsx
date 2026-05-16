@@ -9,6 +9,9 @@ import { deleteGuestNote, renameGuestNote, saveGuestNote } from "@/lib/guestStor
 import formatTimeDate from "@/lib/time-date-formatter";
 import { useUser } from "@clerk/nextjs";
 import { nanoid } from "nanoid";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface NoteCardProps {
   note: {
@@ -32,6 +35,8 @@ export default function NoteCard({ note, isGuest = false, onDelete, onMigrate }:
   const [showConfirm, setShowConfirm] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [renameInputValue, setRenameInputValue] = useState(note.title);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -46,17 +51,26 @@ export default function NoteCard({ note, isGuest = false, onDelete, onMigrate }:
   const handleRename = (e: React.MouseEvent) => {
     e.stopPropagation();
     setMenuOpen(false);
-    const newTitle = window.prompt("Enter new name for the note:", note.title);
-    if (!newTitle || newTitle === note.title) return;
+    setRenameInputValue(note.title);
+    setIsRenameDialogOpen(true);
+  };
+
+  const submitRename = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!renameInputValue || renameInputValue === note.title) {
+      setIsRenameDialogOpen(false);
+      return;
+    }
 
     startTransition(async () => {
       try {
         if (isGuest) {
-          await renameGuestNote(noteId, newTitle);
+          await renameGuestNote(noteId, renameInputValue);
         } else {
-          await updateNote(noteId, { title: newTitle });
+          await updateNote(noteId, { title: renameInputValue });
         }
         toast.success("Note renamed");
+        setIsRenameDialogOpen(false);
         onDelete?.(); // trigger refetch
       } catch {
         toast.error("Failed to rename note");
@@ -336,6 +350,40 @@ export default function NoteCard({ note, isGuest = false, onDelete, onMigrate }:
             </button>
           </div>
         </div>
+      )}
+
+      {/* Rename Dialog */}
+      {isRenameDialogOpen && (
+        <Dialog open={true} onOpenChange={(open) => !open && setIsRenameDialogOpen(false)}>
+          <DialogContent onClick={(e) => e.stopPropagation()}>
+            <DialogHeader>
+              <DialogTitle>Rename Note</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={submitRename} className="flex flex-col gap-4 mt-2">
+              <Input
+                value={renameInputValue}
+                onChange={(e) => setRenameInputValue(e.target.value)}
+                placeholder="Enter note name"
+                disabled={isPending}
+                autoFocus
+              />
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsRenameDialogOpen(false)}
+                  disabled={isPending}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isPending}>
+                  {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { PenLine, FileText } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,7 +22,17 @@ export default function DashboardClient() {
   const { isSignedIn, isLoaded } = useUser();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const activeTab = searchParams.get("tab") || "local";
+
+  // Use local state for instant tab switching to avoid Next.js navigation lag
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "local");
+
+  // Sync state if URL changes externally (e.g., back/forward button)
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab && tab !== activeTab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   const {
     data: localDrawings = [],
@@ -62,9 +72,11 @@ export default function DashboardClient() {
   });
 
   const handleTabChange = (value: string) => {
+    setActiveTab(value);
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", value);
-    router.push(`?${params.toString()}`);
+    // Update the URL without triggering a Next.js server roundtrip
+    window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
   };
 
   if (!isLoaded) {

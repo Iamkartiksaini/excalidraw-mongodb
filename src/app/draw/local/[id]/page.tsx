@@ -15,10 +15,10 @@ const DEFAULT_GUEST_DATA = {
 
 export default function LocalDrawingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  
+
   const [guestData, setGuestData] = useState<any>(null);
   const [ready, setReady] = useState(false);
-  
+
   useEffect(() => {
     loadGuestDrawing(id)
       .then((record) => {
@@ -49,7 +49,7 @@ export default function LocalDrawingPage({ params }: { params: Promise<{ id: str
 
   if (!ready || !guestData) {
     return (
-      <div className="flex items-center justify-center" style={{ height: "calc(100vh - 56px)" }}>
+      <div className="flex items-center justify-center" style={{ height: "calc(100vh - var(--navbar-height, 56px))" }}>
         <span className="text-sm text-[#868e96]" style={{ fontFamily: "'Virgil', cursive" }}>
           Loading your drawing…
         </span>
@@ -59,7 +59,7 @@ export default function LocalDrawingPage({ params }: { params: Promise<{ id: str
 
   return (
     <Suspense fallback={
-      <div className="flex items-center justify-center" style={{ height: "calc(100vh - 56px)" }}>
+      <div className="flex items-center justify-center" style={{ height: "calc(100vh - var(--navbar-height, 56px))" }}>
         <span className="text-sm text-[#868e96]" style={{ fontFamily: "'Virgil', cursive" }}>
           Loading editor…
         </span>

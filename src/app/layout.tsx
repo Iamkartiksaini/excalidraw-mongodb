@@ -12,7 +12,7 @@ const robotoSlabHeading = Roboto_Slab({ subsets: ['latin'], variable: '--font-he
 const raleway = Raleway({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
-  title: "Excali-Draw — Collaborative Whiteboard with MongoDB",
+  title: "Excali-Draw — Collaborative Whiteboard with MongoDB.",
   description: "A premium, hand-drawn style virtual whiteboard with real-time cloud sync powered by MongoDB. Sketch, collaborate, and save your ideas effortlessly.",
   keywords: ["Excalidraw", "MongoDB", "Whiteboard", "Collaboration", "Real-time Sync", "Digital Sketching"],
 };

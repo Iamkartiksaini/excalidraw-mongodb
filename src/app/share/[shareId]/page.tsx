@@ -1,45 +1,46 @@
+"use client";
+
+import { use, useEffect, useState } from "react";
 import { getPublicDrawing } from "@/actions/drawingActions";
-import { notFound } from "next/navigation";
-import { Lock } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
 import ShareExcalidrawClient from "./ShareExcalidrawClient";
+
 interface SharePageProps {
   params: Promise<{
     shareId: string;
   }>;
 }
 
-export default async function SharePage({ params }: SharePageProps) {
-  try {
-    const { shareId } = await params;
-    const drawing = await getPublicDrawing(shareId);
+export default function SharePage({ params }: SharePageProps) {
+  const { shareId } = use(params);
+  const { userId, isLoaded } = useAuth();
+  const [drawing, setDrawing] = useState<any>(null);
+  const [error, setError] = useState<boolean>(false);
 
+  useEffect(() => {
+    getPublicDrawing(shareId)
+      .then((data) => setDrawing(data))
+      .catch(() => setError(true));
+  }, [shareId]);
+
+  if (error) {
     return (
-      <div className="flex-1 flex flex-col relative h-[calc(100vh-64px)] overflow-hidden">
-        {/* Header Overlay */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-3 bg-white/90 backdrop-blur shadow-xl border rounded-2xl">
-          <Lock className="w-4 h-4 text-zinc-400" />
-          <h1 className="font-bold text-lg">{drawing.title}</h1>
-          <span className="px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-500 text-xs font-semibold">
-            READ ONLY
-          </span>
-        </div>
-
-        <div className="flex-1">
-          <ShareExcalidrawClient drawing={drawing} />
-        </div>
-
-        {/* Floating CTA */}
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-50">
-          <a
-            href="/"
-            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-full font-semibold shadow-2xl hover:bg-indigo-700 transition-all hover:scale-105"
-          >
-            Create Your Own Board
-          </a>
-        </div>
+      <div className="flex-1 flex items-center justify-center h-[calc(100vh-64px)]">
+        <p className="text-red-500 font-semibold" style={{ fontFamily: "'Virgil', cursive" }}>Drawing not found.</p>
       </div>
     );
-  } catch (error) {
-    notFound();
   }
+
+  if (!drawing || !isLoaded) {
+    return (
+      <div className="flex-1 flex items-center justify-center h-[calc(100vh-64px)]">
+        <p className="text-zinc-500 font-semibold" style={{ fontFamily: "'Virgil', cursive" }}>Loading drawing...</p>
+      </div>
+    );
+  }
+  return (
+    <div className="flex-1 flex flex-col relative h-[calc(100vh-64px)] overflow-hidden">
+      <ShareExcalidrawClient drawing={drawing} isLoggedIn={userId ? true : false} />
+    </div>
+  );
 }

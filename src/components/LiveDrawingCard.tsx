@@ -215,7 +215,7 @@ export default function LiveDrawingCard({ drawing }: LiveDrawingCardProps) {
 
           {showMenu && (
             <div
-              className="absolute right-0 top-full mt-1 w-36 bg-white border-2 border-[#1e1e1e] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-50 py-1 overflow-hidden"
+              className="absolute right-0 top-full mt-1 w-max bg-white border-2 border-[#1e1e1e] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-50 py-1 overflow-hidden"
               style={{ fontFamily: "'Virgil', cursive", borderRadius: "8px 2px 7px 3px / 3px 7px 2px 8px" }}
             >
               <div

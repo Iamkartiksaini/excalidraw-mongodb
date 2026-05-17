@@ -6,7 +6,7 @@ import { getNoteById } from "@/actions/noteActions";
 
 interface NotePageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ guest?: string }>;
+  searchParams: Promise<{ guest?: string; share?: string }>;
 }
 
 export async function generateMetadata({ params, searchParams }: NotePageProps): Promise<Metadata> {
@@ -23,7 +23,7 @@ export async function generateMetadata({ params, searchParams }: NotePageProps):
 
 export default async function NotePage({ params, searchParams }: NotePageProps) {
   const { id } = await params;
-  const { guest } = await searchParams;
+  const { guest, share } = await searchParams;
   const { userId } = await auth();
 
   // Guest note: NoteEditor will handle loading from IndexedDB on the client
@@ -39,7 +39,7 @@ export default async function NotePage({ params, searchParams }: NotePageProps) 
   // Cloud note
   try {
     const note = await getNoteById(id);
-    return <NoteEditor initialNote={note} isGuest={false} />;
+    return <NoteEditor initialNote={note} isGuest={false} autoOpenShare={share === "1"} />;
   } catch {
     notFound();
   }

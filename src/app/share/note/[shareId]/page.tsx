@@ -42,5 +42,5 @@ export default function ShareNotePage({ params }: ShareNotePageProps) {
     );
   }
 
-  return <ShareNoteClient note={note} isLoggedIn={!!userId} />;
+  return <ShareNoteClient note={note} clerkUserId={userId || undefined} />;
 }

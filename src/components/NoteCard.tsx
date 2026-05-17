@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FileText, Trash2, Globe, Lock, Loader2, Clock, Upload, Copy, MoreVertical, Edit2, Link } from "lucide-react";
 import { toast } from "sonner";
 import { deleteNote, toggleNotePublic, migrateLocalNote, updateNote } from "@/actions/noteActions";
+import { toggleSavedPublicLink } from "@/actions/shareActions";
 import { deleteGuestNote, renameGuestNote, saveGuestNote } from "@/lib/guestStorage";
 import formatTimeDate from "@/lib/time-date-formatter";
 import { useUser } from "@clerk/nextjs";
@@ -12,6 +13,7 @@ import { nanoid } from "nanoid";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import ShareDialog from "@/components/ShareDialog";
 
 interface NoteCardProps {
   note: {
@@ -19,9 +21,13 @@ interface NoteCardProps {
     key?: string;
     title: string;
     content: string;
+    visibility?: "private" | "public" | "restricted";
+    invitedEmails?: string[];
+    folderId?: string;
     isPublic?: boolean;
     shareId?: string;
     updatedAt?: string;
+    userId?: string;
   };
   isGuest?: boolean;
   onDelete?: () => void;
@@ -30,13 +36,15 @@ interface NoteCardProps {
 
 export default function NoteCard({ note, isGuest = false, onDelete, onMigrate }: NoteCardProps) {
   const router = useRouter();
-  const { isSignedIn } = useUser();
+  const { isSignedIn, user } = useUser();
+  const isShared = !isGuest && !!user?.id && !!note.userId && note.userId !== user.id;
   const [isPending, startTransition] = useTransition();
   const [showConfirm, setShowConfirm] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [renameInputValue, setRenameInputValue] = useState(note.title);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -123,14 +131,18 @@ export default function NoteCard({ note, isGuest = false, onDelete, onMigrate }:
       try {
         if (isGuest) {
           await deleteGuestNote(noteId);
+          toast.success("Note deleted");
+        } else if (isShared) {
+          await toggleSavedPublicLink(noteId, "note");
+          toast.success("Note removed from dashboard");
         } else {
           await deleteNote(noteId);
+          toast.success("Note deleted");
         }
-        toast.success("Note deleted");
         onDelete?.();
         setShowConfirm(false);
       } catch {
-        toast.error("Failed to delete note");
+        toast.error(isShared ? "Failed to unsave note" : "Failed to delete note");
         setShowConfirm(false);
       }
     });
@@ -237,12 +249,14 @@ export default function NoteCard({ note, isGuest = false, onDelete, onMigrate }:
           
           {menuOpen && (
             <div className="absolute right-0 top-8 mt-1 w-48 bg-white rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-[#e9ecef] py-1 z-20 flex flex-col font-sans">
-              <button
-                onClick={handleRename}
-                className="w-full text-left px-4 py-2 text-sm text-[#495057] hover:bg-[#f3f0ff] hover:text-[#6965db] flex items-center gap-2 transition-colors"
-              >
-                <Edit2 className="w-3.5 h-3.5" /> Rename
-              </button>
+              {!isShared && (
+                <button
+                  onClick={handleRename}
+                  className="w-full text-left px-4 py-2 text-sm text-[#495057] hover:bg-[#f3f0ff] hover:text-[#6965db] flex items-center gap-2 transition-colors"
+                >
+                  <Edit2 className="w-3.5 h-3.5" /> Rename
+                </button>
+              )}
               
               {isGuest && isSignedIn && (
                 <>
@@ -262,6 +276,16 @@ export default function NoteCard({ note, isGuest = false, onDelete, onMigrate }:
                   </button>
                 </>
               )}
+
+              {isShared && (
+                <button
+                  onClick={handleCloneToCloud}
+                  disabled={isPending}
+                  className="w-full text-left px-4 py-2 text-sm text-[#495057] hover:bg-[#f3f0ff] hover:text-[#6965db] flex items-center gap-2 transition-colors disabled:opacity-50"
+                >
+                  <Copy className="w-3.5 h-3.5" /> Clone to cloud
+                </button>
+              )}
               
               <button
                 onClick={handleCloneLocal}
@@ -271,25 +295,26 @@ export default function NoteCard({ note, isGuest = false, onDelete, onMigrate }:
                 <Copy className="w-3.5 h-3.5" /> Clone locally
               </button>
               
-              {!isGuest && (
-                <>
-                  <button
-                    onClick={handleTogglePublic}
-                    disabled={isPending}
-                    className="w-full text-left px-4 py-2 text-sm text-[#495057] hover:bg-[#f3f0ff] hover:text-[#6965db] flex items-center gap-2 transition-colors disabled:opacity-50"
-                  >
-                    {note.isPublic ? <Lock className="w-3.5 h-3.5" /> : <Globe className="w-3.5 h-3.5" />}
-                    {note.isPublic ? "Make private" : "Make public"}
-                  </button>
-                  {note.isPublic && (
-                    <button
-                      onClick={handleCopyLink}
-                      className="w-full text-left px-4 py-2 text-sm text-[#495057] hover:bg-[#f3f0ff] hover:text-[#6965db] flex items-center gap-2 transition-colors"
-                    >
-                      <Link className="w-3.5 h-3.5" /> Copy share link
-                    </button>
-                  )}
-                </>
+              {!isGuest && !isShared && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    setIsShareDialogOpen(true);
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-[#495057] hover:bg-[#f3f0ff] hover:text-[#6965db] flex items-center gap-2 transition-colors"
+                >
+                  <Globe className="w-3.5 h-3.5" /> Share
+                </button>
+              )}
+
+              {!isGuest && note.shareId && (
+                <button
+                  onClick={handleCopyLink}
+                  className="w-full text-left px-4 py-2 text-sm text-[#495057] hover:bg-[#f3f0ff] hover:text-[#6965db] flex items-center gap-2 transition-colors"
+                >
+                  <Link className="w-3.5 h-3.5" /> Copy share link
+                </button>
               )}
               
               <div className="h-px bg-[#f1f3f5] my-1 mx-2" />
@@ -300,7 +325,7 @@ export default function NoteCard({ note, isGuest = false, onDelete, onMigrate }:
                 className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors disabled:opacity-50"
               >
                 {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                Delete
+                {isShared ? "Unsave Note" : "Delete"}
               </button>
             </div>
           )}
@@ -334,13 +359,15 @@ export default function NoteCard({ note, isGuest = false, onDelete, onMigrate }:
           className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/90 backdrop-blur-sm rounded-xl z-10"
           onClick={(e) => e.stopPropagation()}
         >
-          <p className="text-sm font-semibold text-[#1e1e1e]" style={{ fontFamily: "'Virgil', cursive" }}>Delete this note?</p>
+          <p className="text-sm font-semibold text-[#1e1e1e]" style={{ fontFamily: "'Virgil', cursive" }}>
+            {isShared ? "Unsave this note?" : "Delete this note?"}
+          </p>
           <div className="flex gap-2">
             <button
               onClick={handleDelete}
               className="px-4 py-1.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-colors"
             >
-              {isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Delete"}
+              {isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : isShared ? "Unsave" : "Delete"}
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); setShowConfirm(false); }}
@@ -384,6 +411,21 @@ export default function NoteCard({ note, isGuest = false, onDelete, onMigrate }:
             </form>
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* Share Dialog */}
+      {isShareDialogOpen && (
+        <ShareDialog
+          isOpen={true}
+          onClose={() => setIsShareDialogOpen(false)}
+          entityId={noteId}
+          entityType="note"
+          initialVisibility={note.visibility || (note.isPublic ? "public" : "private")}
+          initialInvitedEmails={note.invitedEmails || []}
+          shareId={note.shareId}
+          folderId={note.folderId}
+          onUpdate={onDelete}
+        />
       )}
     </div>
   );

@@ -4,17 +4,21 @@ import { useState, useEffect, useRef, useCallback, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  Save, Trash2, Globe, Lock, ArrowLeft, Loader2, CheckCircle2
+  Save, Trash2, Globe, Lock, ArrowLeft, Loader2, CheckCircle2, Users
 } from "lucide-react";
 import { updateNote, deleteNote, toggleNotePublic } from "@/actions/noteActions";
 import { saveGuestNote, deleteGuestNote, loadGuestNote } from "@/lib/guestStorage";
 import MarkdownEditorLayout from "@/components/MarkdownEditorLayout";
+import ShareDialog from "@/components/ShareDialog";
 
 interface Note {
   _id?: string;
   key?: string;
   title: string;
   content: string;
+  visibility?: "private" | "public" | "restricted";
+  invitedEmails?: string[];
+  folderId?: string;
   isPublic?: boolean;
   shareId?: string;
   updatedAt?: string;
@@ -23,13 +27,14 @@ interface Note {
 interface NoteEditorProps {
   initialNote: Note;
   isGuest?: boolean;
+  autoOpenShare?: boolean;
 }
 
 type SaveStatus = "idle" | "saving" | "saved";
 
 const AUTOSAVE_DELAY = 1500;
 
-export default function NoteEditor({ initialNote, isGuest = false }: NoteEditorProps) {
+export default function NoteEditor({ initialNote, isGuest = false, autoOpenShare = false }: NoteEditorProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -37,6 +42,11 @@ export default function NoteEditor({ initialNote, isGuest = false }: NoteEditorP
   const [title, setTitle] = useState(initialNote.title);
   const [content, setContent] = useState(initialNote.content);
   const [isPublic, setIsPublic] = useState(initialNote.isPublic ?? false);
+  const [visibility, setVisibility] = useState<"private" | "public" | "restricted">(
+    initialNote.visibility || (initialNote.isPublic ? "public" : "private")
+  );
+  const [invitedEmails, setInvitedEmails] = useState<string[]>(initialNote.invitedEmails || []);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(autoOpenShare);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(
     initialNote.updatedAt ? new Date(initialNote.updatedAt) : null
@@ -164,26 +174,7 @@ export default function NoteEditor({ initialNote, isGuest = false }: NoteEditorP
     });
   };
 
-  // Share toggle
-  const handleTogglePublic = () => {
-    if (isGuest) return;
-    startTransition(async () => {
-      try {
-        const next = !isPublic;
-        await toggleNotePublic(noteId, next);
-        setIsPublic(next);
-        if (next && initialNote.shareId) {
-          const shareUrl = `${window.location.origin}/share/note/${initialNote.shareId}`;
-          await navigator.clipboard.writeText(shareUrl);
-          toast.success("Link copied to clipboard!");
-        } else {
-          toast.success("Note set to private");
-        }
-      } catch {
-        toast.error("Failed to update sharing");
-      }
-    });
-  };
+
 
   const formatSavedAt = (date: Date) => {
     const now = new Date();
@@ -220,7 +211,8 @@ export default function NoteEditor({ initialNote, isGuest = false }: NoteEditorP
   };
 
   return (
-    <MarkdownEditorLayout
+    <>
+      <MarkdownEditorLayout
       title={title}
       setTitle={setTitle}
       content={content}
@@ -240,16 +232,31 @@ export default function NoteEditor({ initialNote, isGuest = false }: NoteEditorP
         <>
           {!isGuest && (
             <button
-              onClick={handleTogglePublic}
+              onClick={() => setIsShareDialogOpen(true)}
               disabled={isPending}
-              title={isPublic ? "Make private" : "Share publicly"}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors border-2 ${isPublic
-                ? "border-[#6965db] text-[#6965db] bg-[#f3f0ff]"
-                : "border-[#e9ecef] text-[#868e96] hover:border-[#6965db] hover:text-[#6965db]"
-                }`}
+              title="Open sharing settings"
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors border-2 ${
+                visibility === "public"
+                  ? "border-[#6965db] text-[#6965db] bg-[#f3f0ff]"
+                  : visibility === "restricted"
+                  ? "border-[#d97706] text-[#d97706] bg-[#fffbeb]"
+                  : "border-[#e9ecef] text-[#868e96] hover:border-[#6965db] hover:text-[#6965db]"
+              }`}
             >
-              {isPublic ? <Globe className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{isPublic ? "Public" : "Private"}</span>
+              {visibility === "public" ? (
+                <Globe className="w-3.5 h-3.5" />
+              ) : visibility === "restricted" ? (
+                <Users className="w-3.5 h-3.5" />
+              ) : (
+                <Lock className="w-3.5 h-3.5" />
+              )}
+              <span className="hidden sm:inline">
+                {visibility === "public"
+                  ? "Public"
+                  : visibility === "restricted"
+                  ? "Restricted"
+                  : "Private"}
+              </span>
             </button>
           )}
 
@@ -274,5 +281,24 @@ export default function NoteEditor({ initialNote, isGuest = false }: NoteEditorP
         </>
       }
     />
+
+    {/* Share Dialog */}
+    {isShareDialogOpen && (
+      <ShareDialog
+        isOpen={true}
+        onClose={() => setIsShareDialogOpen(false)}
+        entityId={noteId}
+        entityType="note"
+        initialVisibility={visibility}
+        initialInvitedEmails={invitedEmails}
+        shareId={initialNote.shareId}
+        folderId={initialNote.folderId}
+        onUpdate={(newVisibility, newEmails) => {
+          setVisibility(newVisibility);
+          setInvitedEmails(newEmails);
+        }}
+      />
+    )}
+    </>
   );
 }

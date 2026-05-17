@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, lazy, useEffect, useState } from "react";
-import { PenLine, FileText } from "lucide-react";
+import { PenLine, FileText, Users } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LocalDrawingCard from "@/components/LocalDrawingCard";
@@ -9,9 +9,13 @@ import CreateLiveButton from "@/components/CreateLiveButton";
 import CreateLocalButton from "@/components/CreateLocalButton";
 import CreateNoteButton from "@/components/CreateNoteButton";
 import NoteCard from "@/components/NoteCard";
+import CreateFolderButton from "@/components/CreateFolderButton";
+import FolderCard from "@/components/FolderCard";
 import { getAllGuestDrawings, getAllGuestNotes, GuestNoteRecord } from "@/lib/guestStorage";
 import { getUserDrawings } from "@/actions/drawingActions";
 import { getUserNotes } from "@/actions/noteActions";
+import { getUserFolders } from "@/actions/folderActions";
+import { getSharedWithMeNotes } from "@/actions/shareActions";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import DrawingCardSkeleton from "@/components/DrawingCardSkeleton";
@@ -63,12 +67,32 @@ export default function DashboardClient() {
   });
 
   const {
+    data: cloudFolders = [],
+    isLoading: isCloudFoldersLoading,
+    refetch: refetchCloudFolders,
+  } = useQuery({
+    queryKey: ["folders", "cloud"],
+    queryFn: getUserFolders,
+    enabled: isSignedIn && activeTab === "notes",
+  });
+
+  const {
     data: localNotes = [],
     isLoading: isLocalNotesLoading,
     refetch: refetchLocalNotes,
   } = useQuery({
     queryKey: ["notes", "local"],
     queryFn: getAllGuestNotes,
+  });
+
+  const {
+    data: sharedWithMe = { notes: [], folders: [] },
+    isLoading: isSharedLoading,
+    refetch: refetchShared,
+  } = useQuery({
+    queryKey: ["notes", "shared"],
+    queryFn: getSharedWithMeNotes,
+    enabled: isSignedIn && activeTab === "shared",
   });
 
   const handleTabChange = (value: string) => {
@@ -101,16 +125,16 @@ export default function DashboardClient() {
         </div>
 
         <Tabs value={activeTab} className="w-full" onValueChange={handleTabChange}>
-          <TabsList className="mb-8 p-1 bg-[#f3f0ff] border-2 border-[#e9ecef]" style={{ borderRadius: "8px 2px 7px 3px / 3px 7px 2px 8px", fontFamily: "'Virgil', cursive" }}>
+          <TabsList className="mb-8 p-1 bg-[#f3f0ff] border-2 border-[#e9ecef] flex h-auto" style={{ borderRadius: "8px 2px 7px 3px / 3px 7px 2px 8px", fontFamily: "'Virgil', cursive" }}>
             <TabsTrigger
               value="local"
-              className="data-[state=active]:bg-white data-[state=active]:text-[#f59f00] data-[state=active]:shadow-sm text-[#495057] transition-all font-semibold rounded-md flex-1 px-6"
+              className="data-[state=active]:bg-white data-[state=active]:text-[#f59f00] data-[state=active]:shadow-sm text-[#495057] transition-all font-semibold rounded-md flex-1 px-6 py-2 flex items-center justify-center gap-1.5"
             >
               Local Drawings {localDrawings.length > 0 && `(${localDrawings.length})`}
             </TabsTrigger>
             <TabsTrigger
               value="notes"
-              className="data-[state=active]:bg-white data-[state=active]:text-[#6965db] data-[state=active]:shadow-sm text-[#495057] transition-all font-semibold rounded-md flex-1 px-6 flex items-center gap-1.5"
+              className="data-[state=active]:bg-white data-[state=active]:text-[#6965db] data-[state=active]:shadow-sm text-[#495057] transition-all font-semibold rounded-md flex-1 px-6 py-2 flex items-center justify-center gap-1.5"
             >
               <FileText className="w-3.5 h-3.5" />
               Notes {localNotes.length > 0 && `(${localNotes.length})`}
@@ -181,25 +205,32 @@ export default function DashboardClient() {
       </div>
 
       <Tabs value={activeTab} className="w-full" onValueChange={handleTabChange}>
-        <TabsList className="mb-8 p-1 bg-[#f3f0ff] border-2 border-[#e9ecef]" style={{ borderRadius: "8px 2px 7px 3px / 3px 7px 2px 8px", fontFamily: "'Virgil', cursive" }}>
+        <TabsList className="mb-8 p-1 bg-[#f3f0ff] border-2 border-[#e9ecef] flex h-auto" style={{ borderRadius: "8px 2px 7px 3px / 3px 7px 2px 8px", fontFamily: "'Virgil', cursive" }}>
           <TabsTrigger
             value="live"
-            className="data-[state=active]:bg-white data-[state=active]:text-[#6965db] data-[state=active]:shadow-sm text-[#495057] transition-all font-semibold rounded-md flex-1 px-6"
+            className="data-[state=active]:bg-white data-[state=active]:text-[#6965db] data-[state=active]:shadow-sm text-[#495057] transition-all font-semibold rounded-md flex-1 px-6 py-2 flex items-center justify-center gap-1.5"
           >
             Cloud Drawings
           </TabsTrigger>
           <TabsTrigger
             value="local"
-            className="data-[state=active]:bg-white data-[state=active]:text-[#f59f00] data-[state=active]:shadow-sm text-[#495057] transition-all font-semibold rounded-md flex-1 px-6"
+            className="data-[state=active]:bg-white data-[state=active]:text-[#f59f00] data-[state=active]:shadow-sm text-[#495057] transition-all font-semibold rounded-md flex-1 px-6 py-2 flex items-center justify-center gap-1.5"
           >
             Local Drawings {localDrawings.length > 0 && `(${localDrawings.length})`}
           </TabsTrigger>
           <TabsTrigger
             value="notes"
-            className="data-[state=active]:bg-white data-[state=active]:text-[#6965db] data-[state=active]:shadow-sm text-[#495057] transition-all font-semibold rounded-md flex-1 px-6 flex items-center gap-1.5"
+            className="data-[state=active]:bg-white data-[state=active]:text-[#6965db] data-[state=active]:shadow-sm text-[#495057] transition-all font-semibold rounded-md flex-1 px-6 py-2 flex items-center justify-center gap-1.5"
           >
             <FileText className="w-3.5 h-3.5" />
-            Notes {(cloudNotes.length + localNotes.length) > 0 && `(${cloudNotes.length + localNotes.length})`}
+            Notes {(cloudNotes.length + localNotes.length + cloudFolders.length) > 0 && `(${cloudNotes.length + localNotes.length + cloudFolders.length})`}
+          </TabsTrigger>
+          <TabsTrigger
+            value="shared"
+            className="data-[state=active]:bg-white data-[state=active]:text-[#6965db] data-[state=active]:shadow-sm text-[#495057] transition-all font-semibold rounded-md flex-1 px-6 py-2 flex items-center justify-center gap-1.5"
+          >
+            <Users className="w-3.5 h-3.5" />
+            Shared {(sharedWithMe.notes.length + sharedWithMe.folders.length) > 0 && `(${sharedWithMe.notes.length + sharedWithMe.folders.length})`}
           </TabsTrigger>
         </TabsList>
 
@@ -257,6 +288,33 @@ export default function DashboardClient() {
         </TabsContent>
         {/* NOTES TAB CONTENT */}
         <TabsContent value="notes" className="mt-0 outline-none">
+          {/* Cloud folders section */}
+          {isSignedIn && (
+            <>
+              <p className="text-xs font-semibold text-[#adb5bd] uppercase tracking-widest mb-4">Cloud Folders</p>
+              {isCloudFoldersLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+                  {[...Array(4)].map((_, i) => <DrawingCardSkeleton key={i} />)}
+                </div>
+              ) : cloudFolders.length === 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+                  <CreateFolderButton asCard onCreated={() => refetchCloudFolders()} />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+                  <CreateFolderButton asCard onCreated={() => refetchCloudFolders()} />
+                  {cloudFolders.map((folder: any) => (
+                    <FolderCard
+                      key={folder._id}
+                      folder={folder}
+                      onDelete={() => refetchCloudFolders()}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
           {/* Cloud notes section */}
           {isSignedIn && (
             <>
@@ -305,6 +363,56 @@ export default function DashboardClient() {
                   isGuest
                   onDelete={() => refetchLocalNotes()}
                   onMigrate={() => { refetchLocalNotes(); refetchCloudNotes(); }}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* SHARED WITH ME TAB CONTENT */}
+        <TabsContent value="shared" className="mt-0 outline-none">
+          {/* Shared Folders */}
+          {sharedWithMe.folders.length > 0 && (
+            <>
+              <p className="text-xs font-semibold text-[#adb5bd] uppercase tracking-widest mb-4">Shared Folders</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+                {sharedWithMe.folders.map((folder: any) => (
+                  <FolderCard
+                    key={folder._id}
+                    folder={folder}
+                    onDelete={() => refetchShared()}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Shared Notes */}
+          <p className="text-xs font-semibold text-[#adb5bd] uppercase tracking-widest mb-4">Shared Notes</p>
+          {isSharedLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[...Array(4)].map((_, i) => <DrawingCardSkeleton key={i} />)}
+            </div>
+          ) : sharedWithMe.notes.length === 0 && sharedWithMe.folders.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-[#e9ecef] bg-[#f8f9fa] rounded-2xl gap-3 text-center">
+              <div className="w-12 h-12 rounded-full bg-[#f3f0ff] flex items-center justify-center text-[#6965db]">
+                <Users className="w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="font-bold text-[#1e1e1e] text-sm mb-1">Nothing shared with you yet</h4>
+                <p className="text-xs text-[#868e96] max-w-[280px] leading-relaxed">
+                  When other users share their restricted notes or folders with your email, they will appear here.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {sharedWithMe.notes.map((note: any) => (
+                <NoteCard
+                  key={note._id}
+                  note={note}
+                  isGuest={false}
+                  onDelete={() => refetchShared()}
                 />
               ))}
             </div>

@@ -41,6 +41,7 @@ export default function NoteEditor({ initialNote, isGuest = false }: NoteEditorP
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(
     initialNote.updatedAt ? new Date(initialNote.updatedAt) : null
   );
+  const lastSavedTitle = useRef(initialNote.title);
 
   const noteId = initialNote._id ?? initialNote.key ?? "";
 
@@ -75,7 +76,12 @@ export default function NoteEditor({ initialNote, isGuest = false }: NoteEditorP
   );
 
   const triggerSave = useCallback(
-    (t: string, c: string) => {
+    (t: string, c: string, changed_key?: string) => {
+      if (changed_key === "title") {
+        if (t === lastSavedTitle.current) {
+          return;
+        }
+      }
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
       setSaveStatus("saving");
       autosaveTimer.current = setTimeout(async () => {
@@ -85,6 +91,7 @@ export default function NoteEditor({ initialNote, isGuest = false }: NoteEditorP
           } else {
             await saveToCloud(t, c);
           }
+          lastSavedTitle.current = t;
           setLastSavedAt(new Date());
           setSaveStatus("saved");
           setTimeout(() => setSaveStatus("idle"), 2000);
@@ -217,11 +224,8 @@ export default function NoteEditor({ initialNote, isGuest = false }: NoteEditorP
       title={title}
       setTitle={setTitle}
       content={content}
-      setContent={(newContent) => {
-        setContent(newContent);
-        triggerSave(title, newContent);
-      }}
-      onTitleBlur={() => triggerSave(title, content)}
+      setContent={setContent}
+      onTitleBlur={() => triggerSave(title, content, "title")}
       backButtonSlot={
         <button
           onClick={handleExit}
@@ -239,11 +243,10 @@ export default function NoteEditor({ initialNote, isGuest = false }: NoteEditorP
               onClick={handleTogglePublic}
               disabled={isPending}
               title={isPublic ? "Make private" : "Share publicly"}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors border-2 ${
-                isPublic
-                  ? "border-[#6965db] text-[#6965db] bg-[#f3f0ff]"
-                  : "border-[#e9ecef] text-[#868e96] hover:border-[#6965db] hover:text-[#6965db]"
-              }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors border-2 ${isPublic
+                ? "border-[#6965db] text-[#6965db] bg-[#f3f0ff]"
+                : "border-[#e9ecef] text-[#868e96] hover:border-[#6965db] hover:text-[#6965db]"
+                }`}
             >
               {isPublic ? <Globe className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
               <span className="hidden sm:inline">{isPublic ? "Public" : "Private"}</span>

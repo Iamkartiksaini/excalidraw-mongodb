@@ -2,7 +2,7 @@
 
 import connectToDatabase from "@/lib/db";
 import Note from "@/models/Note";
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth, currentUser, clerkClient } from "@clerk/nextjs/server";
 import { nanoid } from "nanoid";
 import { revalidatePath } from "next/cache";
 
@@ -248,6 +248,122 @@ export async function getUserNotesPreview() {
   ).sort({ updatedAt: -1 });
 
   // Process notes: strip markdown syntax and truncate content to max 100 characters
+  const processedNotes = notes.map((note) => {
+    const rawContent = note.content || "";
+    
+    // Strip headers, bold, italics, links, backticks, strikethrough markdown
+    const strippedContent = rawContent
+      .replace(/#{1,6}\s/g, "")
+      .replace(/\*\*|__|\*|_|~~|`{1,3}/g, "")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+    
+    // Slice to max 100 characters
+    const previewContent = strippedContent.slice(0, 100);
+
+    const noteObj = JSON.parse(JSON.stringify(note));
+    noteObj.content = previewContent;
+    return noteObj;
+  });
+
+  return processedNotes;
+}
+
+export async function clonePublicNoteToCloud(noteId: string) {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  await connectToDatabase();
+  const sourceNote = await Note.findById(noteId);
+  if (!sourceNote) throw new Error("Note not found");
+
+  // Strictly check that the note's visibility is public, or isPublic is true, or it belongs to a public folder
+  let isPubliclyClonable = sourceNote.visibility === "public" || sourceNote.isPublic;
+
+  if (!isPubliclyClonable && sourceNote.folderId) {
+    const NoteFolder = (await import("@/models/NoteFolder")).default;
+    const folder = await NoteFolder.findById(sourceNote.folderId);
+    if (folder && folder.visibility === "public") {
+      isPubliclyClonable = true;
+    }
+  }
+
+  if (!isPubliclyClonable) {
+    throw new Error("Unauthorized: This note is not publicly clonable");
+  }
+
+  const newNote = await Note.create({
+    userId,
+    title: `${sourceNote.title || "Untitled"} (Clone)`,
+    content: sourceNote.content,
+    visibility: "private",
+    invitedEmails: [],
+    isPublic: false,
+    shareId: nanoid(10),
+  });
+
+  revalidatePath("/dashboard", "page");
+
+  return JSON.parse(JSON.stringify(newNote));
+}
+
+export async function searchProfiles(query: string) {
+  const client = await clerkClient();
+  const response = await client.users.getUserList({ query });
+  const users = Array.isArray(response) ? response : (response.data || []);
+
+  const filtered = users
+    .filter((user) => !!user.username)
+    .map((user) => ({
+      id: user.id,
+      username: user.username,
+      imageUrl: user.imageUrl,
+    }));
+
+  return filtered;
+}
+
+export async function getProfileByUsername(username: string) {
+  const client = await clerkClient();
+  const response = await client.users.getUserList({ username: [username], limit: 1 });
+  const users = Array.isArray(response) ? response : (response.data || []);
+
+  if (users.length === 0) {
+    return null;
+  }
+
+  const user = users[0];
+  if (!user.username) return null;
+
+  return {
+    id: user.id,
+    username: user.username,
+    imageUrl: user.imageUrl,
+  };
+}
+
+export async function getPublicNotesByUserId(profileUserId: string) {
+  await connectToDatabase();
+
+  const NoteFolder = (await import("@/models/NoteFolder")).default;
+  const publicFolders = await NoteFolder.find({
+    userId: profileUserId,
+    visibility: "public",
+  }).select("_id");
+
+  const publicFolderIds = publicFolders.map((f) => f._id);
+
+  // Fetch up to 10 notes
+  const notes = await Note.find({
+    userId: profileUserId,
+    $or: [
+      { folderId: { $exists: false }, visibility: "public" },
+      { folderId: null, visibility: "public" },
+      { folderId: { $in: publicFolderIds } },
+    ],
+  })
+    .sort({ updatedAt: -1 })
+    .limit(10);
+
   const processedNotes = notes.map((note) => {
     const rawContent = note.content || "";
     

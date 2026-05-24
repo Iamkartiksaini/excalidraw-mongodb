@@ -39,8 +39,8 @@ export default function NoteEditor({ initialNote, isGuest = false, autoOpenShare
   const [isPending, startTransition] = useTransition();
 
   // Content state
-  const [title, setTitle] = useState(initialNote.title);
-  const [content, setContent] = useState(initialNote.content);
+  const [title, setTitleState] = useState(initialNote.title);
+  const [content, setContentState] = useState(initialNote.content);
   const [isPublic, setIsPublic] = useState(initialNote.isPublic ?? false);
   const [visibility, setVisibility] = useState<"private" | "public" | "restricted">(
     initialNote.visibility || (initialNote.isPublic ? "public" : "private")
@@ -53,6 +53,23 @@ export default function NoteEditor({ initialNote, isGuest = false, autoOpenShare
   );
   const lastSavedTitle = useRef(initialNote.title);
 
+  const [isHydrated, setIsHydrated] = useState(!isGuest);
+  const isDirty = useRef(false);
+
+  const setTitle = useCallback((t: string) => {
+    setTitleState(t);
+    if (isHydrated) {
+      isDirty.current = true;
+    }
+  }, [isHydrated]);
+
+  const setContent = useCallback((c: string) => {
+    setContentState(c);
+    if (isHydrated) {
+      isDirty.current = true;
+    }
+  }, [isHydrated]);
+
   const noteId = initialNote._id ?? initialNote.key ?? "";
 
   // Hydrate guest note from IndexedDB on first mount
@@ -60,15 +77,26 @@ export default function NoteEditor({ initialNote, isGuest = false, autoOpenShare
     if (!isGuest) return;
     loadGuestNote(noteId).then((record) => {
       if (record) {
-        setTitle(record.title);
-        setContent(record.content);
+        setTitleState(record.title);
+        setContentState(record.content);
+        lastSavedTitle.current = record.title;
       }
+      setIsHydrated(true);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-save debounce
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clean up autosave timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autosaveTimer.current) {
+        clearTimeout(autosaveTimer.current);
+      }
+    };
+  }, []);
 
   // --- Save helpers ---
   const saveToCloud = useCallback(
@@ -104,6 +132,7 @@ export default function NoteEditor({ initialNote, isGuest = false, autoOpenShare
           lastSavedTitle.current = t;
           setLastSavedAt(new Date());
           setSaveStatus("saved");
+          isDirty.current = false;
           setTimeout(() => setSaveStatus("idle"), 2000);
         } catch {
           setSaveStatus("idle");
@@ -113,12 +142,6 @@ export default function NoteEditor({ initialNote, isGuest = false, autoOpenShare
     },
     [isGuest, saveToCloud, saveToLocal]
   );
-
-  // Auto-save on open
-  useEffect(() => {
-    triggerSave(title, content);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Manual save
   const handleSave = () => {
@@ -132,6 +155,7 @@ export default function NoteEditor({ initialNote, isGuest = false, autoOpenShare
         }
         setLastSavedAt(new Date());
         setSaveStatus("saved");
+        isDirty.current = false;
         toast.success("Note saved");
         setTimeout(() => setSaveStatus("idle"), 2000);
       } catch {
@@ -143,6 +167,10 @@ export default function NoteEditor({ initialNote, isGuest = false, autoOpenShare
   // Exit & Save
   const handleExit = async () => {
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    if (!isHydrated || !isDirty.current) {
+      router.push("/dashboard?tab=notes");
+      return;
+    }
     try {
       if (isGuest) {
         await saveToLocal(title, content);

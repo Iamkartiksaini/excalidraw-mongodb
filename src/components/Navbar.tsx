@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { UserButton, SignInButton, SignUpButton, Show } from "@clerk/nextjs";
-import { LayoutGrid, } from "lucide-react";
+import { LayoutGrid, Compass } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -54,6 +54,14 @@ export default function Navbar() {
               Star Repo
             </span>
           </a>
+          <Link
+            href="/explore"
+            className="text-sm font-medium text-[#1e1e1e] hover:bg-[#f3f4f6] transition-colors py-2 px-3 rounded-lg flex items-center gap-2"
+            style={{ fontFamily: "'Virgil', cursive" }}
+          >
+            <Compass className="w-4 h-4 text-[#6965db]" />
+            Explore
+          </Link>
           <Link
             href="/dashboard"
             className="text-sm font-medium text-[#1e1e1e] hover:bg-[#f3f4f6] transition-colors py-2 px-3 rounded-lg flex items-center gap-2"

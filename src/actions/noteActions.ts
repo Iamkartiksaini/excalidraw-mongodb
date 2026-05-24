@@ -236,3 +236,35 @@ export async function cloneNote(noteId: string) {
   return JSON.parse(JSON.stringify(newNote));
 }
 
+export async function getUserNotesPreview() {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  await connectToDatabase();
+  // Project only essential preview fields to optimize database/network performance
+  const notes = await Note.find(
+    { userId },
+    { title: 1, content: 1, visibility: 1, isPublic: 1, updatedAt: 1, shareId: 1, folderId: 1 }
+  ).sort({ updatedAt: -1 });
+
+  // Process notes: strip markdown syntax and truncate content to max 100 characters
+  const processedNotes = notes.map((note) => {
+    const rawContent = note.content || "";
+    
+    // Strip headers, bold, italics, links, backticks, strikethrough markdown
+    const strippedContent = rawContent
+      .replace(/#{1,6}\s/g, "")
+      .replace(/\*\*|__|\*|_|~~|`{1,3}/g, "")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+    
+    // Slice to max 100 characters
+    const previewContent = strippedContent.slice(0, 100);
+
+    const noteObj = JSON.parse(JSON.stringify(note));
+    noteObj.content = previewContent;
+    return noteObj;
+  });
+
+  return processedNotes;
+}
+

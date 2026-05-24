@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, ReactNode } from "react";
-import ReactMarkdown from "react-markdown";
+import MarkdownPreview from "@/components/MarkdownPreview";
 import { Edit3, Eye, GripVertical } from "lucide-react";
 
 interface MarkdownEditorLayoutProps {
@@ -152,9 +152,7 @@ export default function MarkdownEditorLayout({
           </div>
           <div className="flex-1 overflow-y-auto p-5">
             {content ? (
-              <div className="markdown-preview">
-                <ReactMarkdown>{content}</ReactMarkdown>
-              </div>
+              <MarkdownPreview content={content} />
             ) : (
               <p className="text-sm text-[#ced4da] italic">Preview will appear here…</p>
             )}
@@ -175,9 +173,7 @@ export default function MarkdownEditorLayout({
         ) : (
           <div className="flex-1 overflow-y-auto p-5">
             {content ? (
-              <div className="markdown-preview">
-                <ReactMarkdown>{content}</ReactMarkdown>
-              </div>
+              <MarkdownPreview content={content} />
             ) : (
               <p className="text-sm text-[#ced4da] italic">Preview will appear here…</p>
             )}

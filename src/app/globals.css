@@ -158,8 +158,11 @@ nextjs-portal {
   font-size: 0.9375rem;
   line-height: 1.75;
   font-family: var(--font-sans, system-ui, sans-serif);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
+/* Headings */
 .markdown-preview h1,
 .markdown-preview h2,
 .markdown-preview h3,
@@ -181,33 +184,106 @@ nextjs-portal {
 .markdown-preview h5 { font-size: 1rem; }
 .markdown-preview h6 { font-size: 0.875rem; color: #495057; }
 
+.markdown-preview h1 + h2,
+.markdown-preview h2 + h3 {
+  margin-top: 0.75em;
+}
+
+/* Paragraphs & line breaks */
 .markdown-preview p {
   margin-top: 0;
   margin-bottom: 1em;
 }
 
+.markdown-preview br {
+  content: "";
+}
+
+/* Links */
 .markdown-preview a {
   color: #6965db;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 .markdown-preview a:hover { color: #5854c4; }
+.markdown-preview a code {
+  color: #6965db;
+}
 
+/* Inline emphasis */
 .markdown-preview strong { font-weight: 700; color: #1e1e1e; }
 .markdown-preview em { font-style: italic; }
-.markdown-preview del { text-decoration: line-through; color: #868e96; }
+.markdown-preview del,
+.markdown-preview s {
+  text-decoration: line-through;
+  color: #868e96;
+}
+.markdown-preview sub,
+.markdown-preview sup {
+  font-size: 0.75em;
+  line-height: 0;
+}
+.markdown-preview sup { vertical-align: super; }
+.markdown-preview sub { vertical-align: sub; }
 
+/* Lists */
 .markdown-preview ul,
 .markdown-preview ol {
   padding-left: 1.625em;
+  margin-top: 0;
   margin-bottom: 1em;
 }
+
 .markdown-preview ul { list-style-type: disc; }
 .markdown-preview ol { list-style-type: decimal; }
-.markdown-preview li { margin-bottom: 0.25em; }
-.markdown-preview li > ul,
-.markdown-preview li > ol { margin-top: 0.25em; margin-bottom: 0; }
+.markdown-preview ul ul { list-style-type: circle; }
+.markdown-preview ul ul ul { list-style-type: square; }
+.markdown-preview ol ol { list-style-type: lower-alpha; }
+.markdown-preview ol ol ol { list-style-type: lower-roman; }
 
+.markdown-preview li {
+  margin-bottom: 0.35em;
+}
+
+.markdown-preview li > ul,
+.markdown-preview li > ol {
+  margin-top: 0.35em;
+  margin-bottom: 0.35em;
+}
+
+/* Tighten paragraphs inside list items (CommonMark wraps loose items in <p>) */
+.markdown-preview li > p {
+  margin-top: 0;
+  margin-bottom: 0.5em;
+}
+.markdown-preview li > p:last-child {
+  margin-bottom: 0;
+}
+
+/* GFM task lists */
+.markdown-preview ul:has(> li > input[type="checkbox"]) {
+  list-style: none;
+  padding-left: 0;
+}
+
+.markdown-preview li:has(> input[type="checkbox"]) {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-preview li > input[type="checkbox"] {
+  margin-top: 0.4em;
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  accent-color: #6965db;
+  pointer-events: none;
+  cursor: default;
+}
+
+/* Blockquotes */
 .markdown-preview blockquote {
   border-left: 3px solid #9b96f0;
   padding: 0.5em 1em;
@@ -216,15 +292,33 @@ nextjs-portal {
   color: #495057;
   border-radius: 0 6px 6px 0;
 }
-.markdown-preview blockquote p { margin-bottom: 0; }
 
-.markdown-preview code {
+.markdown-preview blockquote > :first-child {
+  margin-top: 0;
+}
+
+.markdown-preview blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-preview blockquote p + p {
+  margin-top: 0.75em;
+}
+
+.markdown-preview blockquote pre {
+  margin-top: 0.75em;
+  margin-bottom: 0;
+}
+
+/* Inline & block code */
+.markdown-preview :not(pre) > code {
   background: #f1f3f5;
   color: #d63384;
   padding: 0.15em 0.4em;
   border-radius: 4px;
-  font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+  font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
   font-size: 0.875em;
+  word-break: break-word;
 }
 
 .markdown-preview pre {
@@ -234,49 +328,87 @@ nextjs-portal {
   border-radius: 8px;
   overflow-x: auto;
   margin: 1em 0;
-  font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+  font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
   font-size: 0.875em;
   line-height: 1.6;
+  -webkit-overflow-scrolling: touch;
 }
+
 .markdown-preview pre code {
   background: transparent;
   color: inherit;
   padding: 0;
   border-radius: 0;
   font-size: inherit;
+  word-break: normal;
+  white-space: pre;
 }
 
+/* Horizontal rules */
 .markdown-preview hr {
   border: none;
   border-top: 2px dashed #dee2e6;
   margin: 1.5em 0;
 }
 
-.markdown-preview table {
-  width: 100%;
-  border-collapse: collapse;
+/* Tables (wrapped by MarkdownPreview for horizontal scroll) */
+.markdown-preview .markdown-table-wrapper {
+  overflow-x: auto;
   margin-bottom: 1em;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.markdown-preview .markdown-table-wrapper table {
+  width: 100%;
+  min-width: max-content;
+  border-collapse: collapse;
+  margin-bottom: 0;
   font-size: 0.875rem;
 }
+
 .markdown-preview th,
 .markdown-preview td {
   border: 1px solid #dee2e6;
   padding: 0.5em 0.75em;
   text-align: left;
+  vertical-align: top;
 }
+
 .markdown-preview th {
   background: #f3f0ff;
   font-weight: 600;
   color: #1e1e1e;
 }
-.markdown-preview tr:nth-child(even) td { background: #f8f9fa; }
 
-.markdown-preview img {
-  max-width: 100%;
-  border-radius: 6px;
-  margin: 0.5em 0;
+.markdown-preview tbody tr:nth-child(even) td {
+  background: #f8f9fa;
 }
 
-/* First child margin reset */
-.markdown-preview > *:first-child { margin-top: 0; }
-.markdown-preview > *:last-child { margin-bottom: 0; }
+.markdown-preview td code {
+  font-size: 0.8125rem;
+}
+
+/* Images */
+.markdown-preview img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  margin: 0.75em 0;
+}
+
+/* Adjacent block spacing */
+.markdown-preview > *:first-child {
+  margin-top: 0;
+}
+
+.markdown-preview > *:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-preview pre + pre,
+.markdown-preview blockquote + blockquote {
+  margin-top: 0.75em;
+}

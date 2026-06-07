@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { deleteGuestDrawing, renameGuestDrawing, loadGuestDrawing } from "@/lib/guestStorage";
 import { createDrawing, migrateLocalToCloud } from "@/actions/drawingActions";
-import { useQueryClient } from "@tanstack/react-query";
+import { useCloudStore } from "@/store/cloudStore";
 
 interface LocalDrawingCardProps {
   drawing: {
@@ -31,7 +31,7 @@ interface LocalDrawingCardProps {
 
 export default function LocalDrawingCard({ drawing, isLoggedIn, onUpdate }: LocalDrawingCardProps) {
   const router = useRouter();
-  const queryClient = useQueryClient();
+  const { clearDrawings, fetchDrawings } = useCloudStore();
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -108,8 +108,10 @@ export default function LocalDrawingCard({ drawing, isLoggedIn, onUpdate }: Loca
       });
 
       toast.success("Drawing uploaded to Cloud! Local copy preserved.");
-      onUpdate(); // Refresh the list
-      queryClient.invalidateQueries({ queryKey: ["drawings", "live"] });
+      onUpdate(); // Refresh local list
+      // Bust the Zustand cloud drawings cache so the Cloud tab re-fetches
+      clearDrawings();
+      fetchDrawings();
     } catch (error) {
       console.error(error);
       toast.error("Failed to upload drawing to cloud");

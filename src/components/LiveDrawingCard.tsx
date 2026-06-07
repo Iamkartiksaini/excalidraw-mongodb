@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Clock, MoreVertical, Pencil, Trash2, Edit2, Globe, Lock, Link as LinkIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { deleteDrawing, renameDrawing, togglePublic } from "@/actions/drawingActions";
-import { useQueryClient } from "@tanstack/react-query";
+import { useCloudStore } from "@/store/cloudStore";
 import { toast } from "sonner";
 import Link from "next/link";
 import {
@@ -30,7 +30,7 @@ interface LiveDrawingCardProps {
 
 export default function LiveDrawingCard({ drawing }: LiveDrawingCardProps) {
   const router = useRouter();
-  const queryClient = useQueryClient();
+  const { clearDrawings, fetchDrawings } = useCloudStore();
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -58,7 +58,8 @@ export default function LiveDrawingCard({ drawing }: LiveDrawingCardProps) {
     try {
       await deleteDrawing(drawing._id);
       toast.success("Drawing deleted successfully");
-      queryClient.invalidateQueries({ queryKey: ["drawings", "live"] });
+      clearDrawings();
+      fetchDrawings();
     } catch (error) {
       toast.error("Failed to delete drawing");
     } finally {
@@ -81,7 +82,8 @@ export default function LiveDrawingCard({ drawing }: LiveDrawingCardProps) {
       await renameDrawing(drawing._id, trimmedTitle);
       toast.success("Drawing renamed successfully");
       setIsRenaming(false);
-      queryClient.invalidateQueries({ queryKey: ["drawings", "live"] });
+      clearDrawings();
+      fetchDrawings();
     } catch (error) {
       toast.error("Failed to rename drawing");
     }
@@ -107,7 +109,8 @@ export default function LiveDrawingCard({ drawing }: LiveDrawingCardProps) {
     try {
       await togglePublic(drawing._id, !drawing.isPublic);
       toast.success(drawing.isPublic ? "Drawing set to private" : "Drawing is now public");
-      queryClient.invalidateQueries({ queryKey: ["drawings", "live"] });
+      clearDrawings();
+      fetchDrawings();
     } catch (error) {
       toast.error("Failed to update sharing");
     }

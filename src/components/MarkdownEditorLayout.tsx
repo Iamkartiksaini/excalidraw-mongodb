@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, ReactNode } from "react";
 import MarkdownPreview from "@/components/MarkdownPreview";
-import { Edit3, Eye, GripVertical } from "lucide-react";
+import { Edit3, Eye, GripVertical, Bold, Italic, Heading, Quote, Link as LinkIcon, List, Code } from "lucide-react";
 
 interface MarkdownEditorLayoutProps {
   title: string;
@@ -33,6 +33,48 @@ export default function MarkdownEditorLayout({
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
   const dragStartPct = useRef(50);
+
+  const desktopTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const mobileTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const applyFormatting = (prefix: string, suffix: string = "") => {
+    const activeTextarea = desktopTextareaRef.current?.offsetParent 
+      ? desktopTextareaRef.current 
+      : mobileTextareaRef.current;
+      
+    if (!activeTextarea) return;
+
+    const start = activeTextarea.selectionStart;
+    const end = activeTextarea.selectionEnd;
+    const selectedText = activeTextarea.value.substring(start, end);
+    
+    let newText = "";
+    if (prefix === "- " && selectedText.includes("\n")) {
+      newText = selectedText.split("\n").map(line => `${prefix}${line}`).join("\n");
+    } else {
+      newText = `${prefix}${selectedText}${suffix}`;
+    }
+
+    activeTextarea.setRangeText(newText, start, end, "select");
+
+    const event = new Event("input", { bubbles: true });
+    activeTextarea.dispatchEvent(event);
+
+    activeTextarea.focus();
+    if (start === end) {
+      activeTextarea.setSelectionRange(start + prefix.length, start + prefix.length);
+    }
+  };
+
+  const FORMATTING_BUTTONS = [
+    { icon: Bold, label: "Bold", prefix: "**", suffix: "**" },
+    { icon: Italic, label: "Italic", prefix: "_", suffix: "_" },
+    { icon: Heading, label: "Heading", prefix: "# ", suffix: "" },
+    { icon: Quote, label: "Quote", prefix: "> ", suffix: "" },
+    { icon: LinkIcon, label: "Link", prefix: "[", suffix: "](url)" },
+    { icon: List, label: "List", prefix: "- ", suffix: "" },
+    { icon: Code, label: "Code block", prefix: "```\n", suffix: "\n```" },
+  ];
 
   // --- Resizable drag handle ---
   const onMouseDown = (e: React.MouseEvent) => {
@@ -120,12 +162,28 @@ export default function MarkdownEditorLayout({
       <div ref={containerRef} className="hidden md:flex flex-1 overflow-hidden">
         {/* Left pane — editor */}
         <div className="flex flex-col overflow-hidden border-r-0" style={{ width: `${splitPct}%` }}>
-          <div className="px-4 py-1.5 border-b border-[#f1f3f5] bg-[#f8f9fa]">
+          <div className="px-4 py-1.5 border-b border-[#f1f3f5] bg-[#f8f9fa] flex items-center justify-between">
             <span className="text-[10px] font-semibold text-[#adb5bd] uppercase tracking-widest flex items-center gap-1">
               <Edit3 className="w-3 h-3" /> Markdown
             </span>
+            <div className="flex items-center gap-1">
+              {FORMATTING_BUTTONS.map((btn) => (
+                <button
+                  key={btn.label}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    applyFormatting(btn.prefix, btn.suffix);
+                  }}
+                  title={btn.label}
+                  className="p-1 rounded hover:bg-[#e9ecef] text-[#495057] transition-colors"
+                >
+                  <btn.icon className="w-3.5 h-3.5" />
+                </button>
+              ))}
+            </div>
           </div>
           <textarea
+            ref={desktopTextareaRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder={"# My Note\n\nStart writing in **Markdown**...\n\n- List item\n- Another item\n\n```code block```"}
@@ -163,13 +221,31 @@ export default function MarkdownEditorLayout({
       {/* Mobile: single pane with tab toggle */}
       <div className="flex md:hidden flex-1 overflow-hidden flex-col">
         {mobileTab === "edit" ? (
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder={"# My Note\n\nStart writing in **Markdown**..."}
-            className="flex-1 resize-none outline-none p-5 font-mono text-sm text-[#212529] leading-relaxed bg-white placeholder:text-[#ced4da]"
-            spellCheck={false}
-          />
+          <>
+            <div className="px-3 py-1.5 border-b border-[#f1f3f5] bg-[#f8f9fa] flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0">
+              {FORMATTING_BUTTONS.map((btn) => (
+                <button
+                  key={btn.label}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    applyFormatting(btn.prefix, btn.suffix);
+                  }}
+                  title={btn.label}
+                  className="p-1.5 rounded hover:bg-[#e9ecef] text-[#495057] transition-colors shrink-0"
+                >
+                  <btn.icon className="w-4 h-4" />
+                </button>
+              ))}
+            </div>
+            <textarea
+              ref={mobileTextareaRef}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder={"# My Note\n\nStart writing in **Markdown**..."}
+              className="flex-1 resize-none outline-none p-5 font-mono text-sm text-[#212529] leading-relaxed bg-white placeholder:text-[#ced4da]"
+              spellCheck={false}
+            />
+          </>
         ) : (
           <div className="flex-1 overflow-y-auto p-5">
             {content ? (

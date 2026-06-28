@@ -255,7 +255,7 @@ export default function DashboardClient() {
         {/* ── NOTES TAB ──────────────────────────────────────────────────── */}
         <TabsContent value={TAB_NOTES} className="mt-0 outline-none">
           {/* Cloud Folders section (signed-in only) */}
-          {showCloudTabs && (
+          {false && (
             <>
               <div className="flex items-center justify-between mb-4">
                 <CloudSectionShimmerHeader
@@ -266,7 +266,7 @@ export default function DashboardClient() {
               </div>
               {isCloudFoldersLoading || cloudFolders === null ? (
                 <SkeletonGrid count={4} variant="cloud" className="mb-8" />
-              ) : cloudFolders.length === 0 ? (
+              ) : cloudFolders?.length === 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
                   <CreateFolderButton
                     asCard
@@ -285,7 +285,7 @@ export default function DashboardClient() {
                       fetchFolders();
                     }}
                   />
-                  {cloudFolders.map((folder: any) => (
+                      {cloudFolders?.map((folder: any) => (
                     <FolderCard
                       key={folder._id}
                       folder={folder}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { UserButton, SignInButton, SignUpButton, Show } from "@clerk/nextjs";
 import { LayoutGrid, Compass, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 
@@ -11,13 +11,24 @@ export default function Navbar() {
   const [isVisible, setVisible] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  useEffect(() => {
+    const hasBarStatus = sessionStorage.getItem("navbar")
+    if (hasBarStatus) {
+      setVisible(JSON.parse(hasBarStatus));
+      document.body.style.setProperty("--navbar-height", hasBarStatus === "true" ? "56px" : "0px");
+    }
+  }, [])
+
+
   function toggleVisibility() {
     if (isVisible) {
       setTimeout(() => {
         document.body.style.setProperty("--navbar-height", "0px");
+        sessionStorage.setItem("navbar", "false");
       }, 600)
     } else {
       document.body.style.setProperty("--navbar-height", "56px");
+      sessionStorage.setItem("navbar", "true");
     }
     setVisible(!isVisible);
   };

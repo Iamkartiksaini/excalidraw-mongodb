@@ -34,7 +34,7 @@ export default function Navbar() {
   };
 
   return (<div className="relative">
-    <nav id="navbar" className={cn("bg-white sticky flex flex-col top-0 z-50 transition-all duration-300 ease-in-out shadow-sm w-full",
+    <nav id="navbar" style={{ height: "var(--navbar-height,56px)"}}  className={cn("bg-white sticky flex flex-col top-0 z-50 transition-all duration-300 ease-in-out shadow-sm w-full",
       isVisible ? "translate-y-0" : "-translate-y-full"
     )}>
       <div className="w-full h-14 max-w-7xl mx-auto px-4 flex items-center justify-between relative z-50 bg-white">
